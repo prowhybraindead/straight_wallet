@@ -10,6 +10,20 @@ const Scan: React.FC = () => {
     const [result, setResult] = useState('');
     const [processing, setProcessing] = useState(false);
     const [cameraActive, setCameraActive] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleError = (err: any) => {
+        console.error(err);
+        const msg = err?.message || 'Unknown camera error';
+        setError(msg);
+        toast.error('Camera error: ' + msg);
+    };
+
+    const retryCamera = () => {
+        setError(null);
+        setCameraActive(false);
+        setTimeout(() => setCameraActive(true), 100);
+    };
 
     const handleScan = (detectedCodes: any[]) => {
         if (processing || !detectedCodes.length) return;
@@ -61,10 +75,7 @@ const Scan: React.FC = () => {
         }
     };
 
-    const handleError = (error: any) => {
-        console.error(error);
-        toast.error('Camera error: ' + (error?.message || 'Unknown'));
-    };
+
 
     // Simulation logic (kept for fallback/testing)
     const simulateP2P = () => handleScan([{
@@ -116,7 +127,7 @@ const Scan: React.FC = () => {
                 transition={{ type: "spring", damping: 20 }}
                 className="relative w-72 h-72 z-10 overflow-hidden rounded-3xl border-2 border-white/10 shadow-2xl bg-black"
             >
-                {cameraActive ? (
+                {cameraActive && !error ? (
                     <div className="w-full h-full relative">
                         <Scanner
                             onScan={handleScan}
@@ -148,11 +159,31 @@ const Scan: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white/50">
-                        {processing ? (
-                            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white/50 p-4 text-center">
+                        {error ? (
+                            <>
+                                <X className="w-12 h-12 text-red-500 mb-2" />
+                                <p className="text-red-400 text-xs mb-4">{error}</p>
+                                <button
+                                    onClick={retryCamera}
+                                    className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-white text-xs font-bold transition"
+                                >
+                                    Retry Camera
+                                </button>
+                            </>
                         ) : (
-                            <Camera className="w-12 h-12 opacity-20" />
+                            // Loading/Processing state
+                            processing ? (
+                                <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <button
+                                    onClick={() => setCameraActive(true)}
+                                    className="flex flex-col items-center gap-2 group"
+                                >
+                                    <Camera className="w-12 h-12 opacity-20 group-hover:opacity-100 transition" />
+                                    <span className="text-xs">Tap to Start Camera</span>
+                                </button>
+                            )
                         )}
                     </div>
                 )}
