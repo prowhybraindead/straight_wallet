@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Smartphone, Settings, Lock, RotateCcw, CreditCard, ChevronRight } from 'lucide-react';
-import { Card as CardType } from '../types/user';
-import { formatCurrency } from '../utils/format';
+import { motion } from 'framer-motion';
+import { X, Smartphone, Settings, Lock, RotateCcw, CreditCard } from 'lucide-react';
+import type { Card as CardType } from '../types/user';
 
 interface CardDetailViewProps {
     card: CardType;
