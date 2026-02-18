@@ -134,6 +134,20 @@ const Login = () => {
                 </div>
               )}
 
+              {isReg && (
+                <div>
+                  <label className="text-white/70 text-xs font-semibold uppercase tracking-wider block mb-1.5">Phone Number</label>
+                  <input
+                    className="w-full p-3.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 backdrop-blur-sm focus:bg-white/15 transition-all"
+                    placeholder="+1 234 567 890"
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="text-white/70 text-xs font-semibold uppercase tracking-wider block mb-1.5">Email</label>
                 <input

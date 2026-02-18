@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CreditCard, Shield, AlertCircle, X, ChevronRight, Check } from 'lucide-react';
+import { Plus, CreditCard, Shield, ChevronRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { createNewCard } from '../utils/cardGenerator';
-import { Card as CardType, CardScheme } from '../types/user';
+import type { Card as CardType, CardScheme } from '../types/user';
 
 const SCHEMES: { id: CardScheme; name: string; gradient: string }[] = [
     { id: 'VISA', name: 'Visa Signature', gradient: 'bg-gradient-to-br from-blue-600 to-indigo-900' },
