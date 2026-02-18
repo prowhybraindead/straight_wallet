@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Smartphone, Settings, Lock, RotateCcw, CreditCard } from 'lucide-react';
+import { X, Smartphone, Settings, Lock, RotateCcw, CreditCard, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Card as CardType } from '../types/user';
+import { toast } from 'sonner';
 
 interface CardDetailViewProps {
     card: CardType;
@@ -12,9 +13,22 @@ interface CardDetailViewProps {
 }
 
 const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
-    const { user } = useAuth(); // Needed for query
+    const userAuth = useAuth();
+    const { user } = userAuth;
     const [isFlipped, setIsFlipped] = useState(false);
     const [isRotating, setIsRotating] = useState(true);
+
+    // Info Table State
+    const [showNumber, setShowNumber] = useState(false);
+    const [showCvv, setShowCvv] = useState(false);
+    const [copiedState, setCopiedState] = useState<{ field: string | null }>({ field: null });
+
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedState({ field: text });
+        toast.success('Copied to clipboard');
+        setTimeout(() => setCopiedState({ field: null }), 2000);
+    };
 
     // Ledger State
     const [transactions, setTransactions] = useState<any[]>([]);
@@ -186,10 +200,90 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             <p className="text-slate-400 text-sm mb-8 animate-pulse">Tap card to flip</p>
 
             {/* Actions Grid */}
-            <div className="grid grid-cols-3 gap-6 mb-10 w-full max-w-sm">
+            <div className="grid grid-cols-3 gap-6 mb-8 w-full max-w-sm">
                 <OptionButton icon={Lock} label="Lock Card" />
                 <OptionButton icon={Smartphone} label="Mobile Pay" />
                 <OptionButton icon={Settings} label="Settings" />
+            </div>
+
+            {/* Detailed Card Information Table */}
+            <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-md rounded-3xl p-6 border border-white/5 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">Card Details</h3>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-widest">Available</span>
+                        <span className="text-emerald-400 font-bold font-mono">
+                            ${(userAuth?.profile?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Card Number Row */}
+                    <div className="flex flex-col gap-1 border-b border-white/5 pb-3">
+                        <label className="text-[10px] text-slate-500 uppercase tracking-widest">Card Number</label>
+                        <div className="flex items-center justify-between">
+                            <p className="font-mono text-white tracking-widest">
+                                {showNumber
+                                    ? (card.number.match(/.{1,4}/g)?.join(' ') || card.number)
+                                    : `•••• •••• •••• ${card.number.slice(-4)}`
+                                }
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleCopy(card.number)}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    {copiedState.field === card.number ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                </button>
+                                <button
+                                    onClick={() => setShowNumber(!showNumber)}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    {showNumber ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Holder Name */}
+                        <div className="flex flex-col gap-1 border-b border-white/5 pb-3">
+                            <label className="text-[10px] text-slate-500 uppercase tracking-widest">Card Holder</label>
+                            <p className="font-medium text-white text-sm truncate">{card.holderName}</p>
+                        </div>
+
+                        {/* Expiry */}
+                        <div className="flex flex-col gap-1 border-b border-white/5 pb-3">
+                            <label className="text-[10px] text-slate-500 uppercase tracking-widest">Expires</label>
+                            <p className="font-mono text-white text-sm">{card.expiry}</p>
+                        </div>
+                    </div>
+
+                    {/* CVV Row */}
+                    <div className="flex flex-col gap-1 pt-1">
+                        <label className="text-[10px] text-slate-500 uppercase tracking-widest">CVV / CVC</label>
+                        <div className="flex items-center justify-between">
+                            <p className="font-mono text-white tracking-widest">
+                                {showCvv ? card.cvv : '•••'}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleCopy(card.cvv)}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    {copiedState.field === card.cvv ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                </button>
+                                <button
+                                    onClick={() => setShowCvv(!showCvv)}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    {showCvv ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Stats / Ledger Section */}
