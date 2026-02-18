@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { QrCode, X, Zap, Smartphone, CreditCard } from 'lucide-react';
+import { X, Zap, Smartphone, CreditCard, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 const Scan: React.FC = () => {
     const navigate = useNavigate();
     const [result, setResult] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [cameraActive, setCameraActive] = useState(true);
 
-    const handleScan = (data: string) => {
-        if (!data || processing) return;
+    const handleScan = (detectedCodes: any[]) => {
+        if (processing || !detectedCodes.length) return;
+        const data = detectedCodes[0].rawValue;
+        if (!data) return;
+
         setProcessing(true);
         setResult(data);
+        setCameraActive(false); // Pause camera
 
         try {
             // Try JSON format first
@@ -26,12 +32,14 @@ const Scan: React.FC = () => {
             } else if (parsed.type === 'TRAIN_PAY') {
                 toast.info('Redirecting to payment...');
                 const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-                const baseUrl = coreUrl.replace(/\/api\/?$/, '');
+                const baseUrl = coreUrl.replace(/\/api\/?$/, ''); // Strip /api suffix if present
                 setTimeout(() => {
                     window.location.href = `${baseUrl}/pay/${parsed.trxId}`;
                 }, 800);
             } else {
                 toast.error('Unknown QR type');
+                setProcessing(false);
+                setCameraActive(true);
             }
         } catch {
             // Legacy format fallback
@@ -47,23 +55,32 @@ const Scan: React.FC = () => {
                 setTimeout(() => { window.location.href = `${baseUrl}/pay/${id}`; }, 800);
             } else {
                 toast.error('Unknown QR Format');
+                setProcessing(false);
+                setCameraActive(true);
             }
         }
-
-        setTimeout(() => setProcessing(false), 1500);
     };
 
-    // Simulation data
-    const simulateP2P = () => handleScan(JSON.stringify({
-        type: 'P2P',
-        account: '1234567890',
-        name: 'Sakura Tanaka'
-    }));
+    const handleError = (error: any) => {
+        console.error(error);
+        toast.error('Camera error: ' + (error?.message || 'Unknown'));
+    };
 
-    const simulateTrainPay = () => handleScan(JSON.stringify({
-        type: 'TRAIN_PAY',
-        trxId: 'checkout_demo_123'
-    }));
+    // Simulation logic (kept for fallback/testing)
+    const simulateP2P = () => handleScan([{
+        rawValue: JSON.stringify({
+            type: 'P2P',
+            account: '1234567890',
+            name: 'Sakura Tanaka'
+        })
+    }]);
+
+    const simulateTrainPay = () => handleScan([{
+        rawValue: JSON.stringify({
+            type: 'TRAIN_PAY',
+            trxId: 'checkout_demo_123'
+        })
+    }]);
 
     return (
         <div className="h-full min-h-screen bg-slate-950 flex flex-col items-center justify-center relative overflow-hidden">
@@ -77,6 +94,7 @@ const Scan: React.FC = () => {
                 animate={{ opacity: 1 }}
                 onClick={() => navigate('/')}
                 className="absolute top-6 right-6 text-white bg-white/10 hover:bg-white/20 p-2.5 rounded-xl z-20 backdrop-blur-sm transition-colors"
+                style={{ pointerEvents: 'auto' }} // Ensure clickable over layers
             >
                 <X className="w-5 h-5" />
             </motion.button>
@@ -96,77 +114,98 @@ const Scan: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: "spring", damping: 20 }}
-                className="relative w-64 h-64 z-10"
+                className="relative w-72 h-72 z-10 overflow-hidden rounded-3xl border-2 border-white/10 shadow-2xl bg-black"
             >
-                {/* Corner brackets */}
-                <div className="absolute inset-0">
-                    <div className="absolute top-0 left-0 w-10 h-10 border-t-3 border-l-3 border-primary-400 rounded-tl-2xl" />
-                    <div className="absolute top-0 right-0 w-10 h-10 border-t-3 border-r-3 border-primary-400 rounded-tr-2xl" />
-                    <div className="absolute bottom-0 left-0 w-10 h-10 border-b-3 border-l-3 border-accent-400 rounded-bl-2xl" />
-                    <div className="absolute bottom-0 right-0 w-10 h-10 border-b-3 border-r-3 border-accent-400 rounded-br-2xl" />
-                </div>
-
-                {/* Scanner line */}
-                <motion.div
-                    className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-primary-400 to-transparent shadow-[0_0_15px_rgba(124,58,237,0.8)]"
-                    animate={{ top: ['5%', '95%', '5%'] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                />
-
-                {/* Mock camera feed */}
-                <div className="w-full h-full rounded-2xl bg-slate-900/60 backdrop-blur-sm flex items-center justify-center border border-white/5">
-                    <div className="flex flex-col items-center gap-3 text-slate-600">
-                        <QrCode className="w-12 h-12 opacity-30" />
-                        <div className="flex items-center gap-1.5">
-                            <Smartphone className="w-3 h-3" />
-                            <p className="text-[10px] uppercase tracking-widest">Camera Feed</p>
+                {cameraActive ? (
+                    <div className="w-full h-full relative">
+                        <Scanner
+                            onScan={handleScan}
+                            onError={handleError}
+                            components={{
+                                audio: false,
+                                onOff: false,
+                                torch: false,
+                                zoom: false,
+                                finder: false,
+                            }}
+                            styles={{
+                                container: { width: '100%', height: '100%' },
+                                video: { width: '100%', height: '100%', objectFit: 'cover' }
+                            }}
+                        />
+                        {/* Scanner line overlay */}
+                        <motion.div
+                            className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary-400 to-transparent shadow-[0_0_15px_rgba(124,58,237,0.8)] z-20 pointer-events-none"
+                            animate={{ top: ['10%', '90%', '10%'] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                        {/* Corner markers */}
+                        <div className="absolute inset-4 pointer-events-none z-20">
+                            <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary-500 rounded-tl-lg" />
+                            <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary-500 rounded-tr-lg" />
+                            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary-500 rounded-bl-lg" />
+                            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary-500 rounded-br-lg" />
                         </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white/50">
+                        {processing ? (
+                            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Camera className="w-12 h-12 opacity-20" />
+                        )}
+                    </div>
+                )}
             </motion.div>
 
-            {/* Simulation buttons */}
+            {/* Simulation buttons (Fallback) */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 className="mt-10 space-y-3 w-64 z-10"
             >
-                <p className="text-center text-slate-500 text-[10px] uppercase tracking-widest mb-2">Simulation Mode</p>
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px bg-white/10 flex-1" />
+                    <p className="text-slate-500 text-[10px] uppercase tracking-widest">Or Simulate</p>
+                    <div className="h-px bg-white/10 flex-1" />
+                </div>
 
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={simulateP2P}
-                    disabled={processing}
-                    className="w-full bg-gradient-to-r from-primary-600 to-primary-500 text-white px-5 py-3.5 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all disabled:opacity-50"
-                >
-                    <Zap className="w-4 h-4" />
-                    Simulate P2P Transfer
-                </motion.button>
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={simulateP2P}
+                        disabled={processing}
+                        className="bg-white/5 hover:bg-white/10 text-white p-3 rounded-xl text-xs font-semibold flex flex-col items-center gap-2 transition-all disabled:opacity-50"
+                    >
+                        <Zap className="w-4 h-4 text-primary-400" />
+                        Ref P2P
+                    </button>
 
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={simulateTrainPay}
-                    disabled={processing}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-5 py-3.5 rounded-2xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50"
-                >
-                    <CreditCard className="w-4 h-4" />
-                    Simulate TrainPay
-                </motion.button>
+                    <button
+                        onClick={simulateTrainPay}
+                        disabled={processing}
+                        className="bg-white/5 hover:bg-white/10 text-white p-3 rounded-xl text-xs font-semibold flex flex-col items-center gap-2 transition-all disabled:opacity-50"
+                    >
+                        <CreditCard className="w-4 h-4 text-emerald-400" />
+                        TrainPay
+                    </button>
+                </div>
             </motion.div>
 
-            {/* Scanned result */}
+            {/* Scanned result toast (redundant with sonner but good for debug) */}
             <AnimatePresence>
                 {result && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="mt-6 z-10"
+                        className="absolute bottom-8 left-0 right-0 flex justify-center z-20 pointer-events-none"
                     >
-                        <p className="text-slate-500 text-[10px] font-mono text-center max-w-[250px] truncate">
-                            Scanned: {result}
-                        </p>
+                        <div className="bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                            <p className="text-primary-300 text-xs font-mono">
+                                Processing...
+                            </p>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
