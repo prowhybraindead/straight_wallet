@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
     type User,
     onAuthStateChanged,
@@ -6,29 +6,29 @@ import {
     createUserWithEmailAndPassword,
     signOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-interface UserProfile {
+export interface UserProfile {
     uid: string;
     email: string;
-    displayName?: string;
-    pin?: string;
+    displayName: string;
+    pin: string;
     balance: number;
     savings: number;
     accountNumber: string;
+    createdAt?: string;
 }
-
-
 
 interface AuthContextType {
     user: User | null;
     profile: UserProfile | null;
     loading: boolean;
     login: (email: string, pass: string) => Promise<void>;
-    register: (email: string, pass: string, pin: string) => Promise<void>;
+    register: (email: string, pass: string, name: string, pin: string) => Promise<void>;
     logout: () => Promise<void>;
     verifyPin: (pin: string) => Promise<boolean>;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,37 +45,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
-            if (currentUser) {
-                // Fetch Profile
-                const docRef = doc(db, 'users', currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile(docSnap.data() as UserProfile);
-                }
-            } else {
+            if (!currentUser) {
                 setProfile(null);
+                setLoading(false);
+            }
+        });
+        return unsubscribeAuth;
+    }, []);
+
+    // Real-time profile listener — auto-updates balance after transfers
+    useEffect(() => {
+        if (!user) return;
+
+        const docRef = doc(db, 'users', user.uid);
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setProfile(docSnap.data() as UserProfile);
             }
             setLoading(false);
+        }, (error) => {
+            console.error('Profile listener error:', error);
+            setLoading(false);
         });
+
         return unsubscribe;
-    }, []);
+    }, [user]);
 
     const login = async (email: string, pass: string) => {
         await signInWithEmailAndPassword(auth, email, pass);
     };
 
-    const register = async (email: string, pass: string, pin: string) => {
+    const register = async (email: string, pass: string, name: string, pin: string) => {
+        if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+            throw new Error('PIN must be exactly 6 digits');
+        }
         const { user: newUser } = await createUserWithEmailAndPassword(auth, email, pass);
-        // Create Profile
         const newProfile: UserProfile = {
             uid: newUser.uid,
             email: newUser.email!,
-            pin, // In production, hash this!
-            balance: 1000, // Sign up bonus
+            displayName: name || 'User',
+            pin,
+            balance: 1000,
             savings: 0,
-            accountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString()
+            accountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
+            createdAt: new Date().toISOString(),
         };
         await setDoc(doc(db, 'users', newUser.uid), newProfile);
         setProfile(newProfile);
@@ -90,9 +105,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return profile.pin === inputPin;
     };
 
+    const refreshProfile = useCallback(async () => {
+        if (!user) return;
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+        }
+    }, [user]);
+
     return (
-        <AuthContext.Provider value={{ user, profile, loading, login, register, logout, verifyPin }}>
-            {!loading && children}
+        <AuthContext.Provider value={{ user, profile, loading, login, register, logout, verifyPin, refreshProfile }}>
+            {children}
         </AuthContext.Provider>
     );
 };

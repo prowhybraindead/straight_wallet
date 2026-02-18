@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import {
+    ArrowUpRight, ArrowDownLeft, Send, QrCode, CreditCard,
+    LogOut, Moon, Sun, ArrowDownToLine
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import VirtualCard from '../components/VirtualCard';
-// import Layout from '../components/Layout'; // Need to create layout!
 import { formatCurrency } from '../utils/format';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Skeleton } from '../components/Skeleton';
-// import { Transaction } from '../types'; // Define types later
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
-    const { user, profile } = useAuth();
+    const { user, profile, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
     const [showBalance, setShowBalance] = useState(true);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loadingTx, setLoadingTx] = useState(true);
@@ -18,75 +24,204 @@ const Home: React.FC = () => {
     useEffect(() => {
         if (!user) return;
 
+        const qSent = query(
+            collection(db, 'transactions'),
+            where('senderId', '==', user.uid),
+            orderBy('timestamp', 'desc'),
+            limit(5)
+        );
+        const qReceived = query(
+            collection(db, 'transactions'),
+            where('recipientId', '==', user.uid),
+            orderBy('timestamp', 'desc'),
+            limit(5)
+        );
 
-
-        // Actually, let's just show recent activity. 
-        // For production app, use Cloud Functions to fan out or 'participants' array.
-        // I will use a composite query if rules allow, or just 'senderId' for MVP simulation.
-        // Let's assume we want to see both. 
-        // Workaround: Two listeners.
-
-        const qSent = query(collection(db, 'transactions'), where('senderId', '==', user.uid), orderBy('timestamp', 'desc'), limit(5));
-        const qReceived = query(collection(db, 'transactions'), where('recipientId', '==', user.uid), orderBy('timestamp', 'desc'), limit(5));
+        let sentTx: any[] = [];
+        let recvTx: any[] = [];
 
         const unsubSent = onSnapshot(qSent, (snap) => {
-            const sent = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: 'out' }));
-            setTransactions(prev => [...sent, ...prev.filter(t => t.direction === 'in')].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10));
-            setLoadingTx(false);
+            sentTx = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: 'out' }));
+            mergeTransactions();
         });
 
         const unsubRecv = onSnapshot(qReceived, (snap) => {
-            const received = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: 'in' }));
-            setTransactions(prev => [...prev.filter(t => t.direction === 'out'), ...received].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10));
-            setLoadingTx(false);
+            recvTx = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: 'in' }));
+            mergeTransactions();
         });
+
+        function mergeTransactions() {
+            const all = [...sentTx, ...recvTx];
+            const seen = new Set<string>();
+            const unique = all.filter(t => {
+                if (seen.has(t.id)) return false;
+                seen.add(t.id);
+                return true;
+            });
+            unique.sort((a, b) => {
+                const aT = a.timestamp?.toDate?.()?.getTime?.() || 0;
+                const bT = b.timestamp?.toDate?.()?.getTime?.() || 0;
+                return bT - aT;
+            });
+            setTransactions(unique.slice(0, 10));
+            setLoadingTx(false);
+        }
 
         return () => { unsubSent(); unsubRecv(); };
     }, [user]);
 
+    const quickActions = [
+        { name: 'Send', icon: Send, color: 'from-primary-500 to-primary-600', path: '/transfer' },
+        { name: 'Receive', icon: ArrowDownToLine, color: 'from-accent-500 to-accent-600', path: '/receive' },
+        { name: 'Scan', icon: QrCode, color: 'from-emerald-500 to-teal-600', path: '/scan' },
+        { name: 'Card', icon: CreditCard, color: 'from-orange-500 to-rose-500', path: '/card' },
+    ];
+
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+        }
+    };
+
+    const item = {
+        hidden: { opacity: 0, y: 15 },
+        show: { opacity: 1, y: 0 }
+    };
+
     return (
-        <div className="p-6 space-y-6 pb-24">
-            <header className="flex justify-between items-center">
+        <div className="p-5 space-y-6 pt-8">
+            {/* Header */}
+            <motion.header
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-between items-center"
+            >
                 <div>
-                    <h1 className="text-2xl font-bold">Hello, {profile?.displayName || 'User'}</h1>
-                    <p className="text-slate-500">Welcome back</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">Welcome back</p>
+                    <h1 className="text-2xl font-black bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent">
+                        {profile?.displayName || 'User'} ✨
+                    </h1>
                 </div>
-                <button onClick={() => setShowBalance(!showBalance)} className="p-2 bg-slate-100 rounded-full">
-                    {showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-            </header>
+                <div className="flex items-center gap-2">
+                    <motion.button
+                        whileTap={{ scale: 0.9, rotate: 180 }}
+                        onClick={toggleTheme}
+                        className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    >
+                        {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={logout}
+                        className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                        <LogOut className="w-4.5 h-4.5" />
+                    </motion.button>
+                </div>
+            </motion.header>
 
-            <section>
-                <VirtualCard showBalance={showBalance} />
-            </section>
+            {/* Virtual Card */}
+            <motion.section
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+            >
+                <VirtualCard showBalance={showBalance} onToggleBalance={() => setShowBalance(!showBalance)} />
+            </motion.section>
 
-            <section>
-                <h3 className="text-lg font-semibold mb-3">Recent Transactions</h3>
-                <div className="space-y-3">
+            {/* Quick Actions */}
+            <motion.section
+                variants={container}
+                initial="hidden"
+                animate="show"
+            >
+                <div className="grid grid-cols-4 gap-3">
+                    {quickActions.map((action) => (
+                        <motion.button
+                            key={action.name}
+                            variants={item}
+                            whileTap={{ scale: 0.9 }}
+                            whileHover={{ y: -3 }}
+                            onClick={() => navigate(action.path)}
+                            className="flex flex-col items-center gap-2 py-3"
+                        >
+                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg`}>
+                                <action.icon className="w-5 h-5" />
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">{action.name}</span>
+                        </motion.button>
+                    ))}
+                </div>
+            </motion.section>
+
+            {/* Recent Transactions */}
+            <motion.section
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+            >
+                <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-base font-bold dark:text-white">Recent Activity</h3>
+                    <button
+                        onClick={() => navigate('/analysis')}
+                        className="text-xs font-semibold text-primary-500 hover:text-primary-600 transition-colors"
+                    >
+                        View All →
+                    </button>
+                </div>
+
+                <div className="space-y-2.5">
                     {loadingTx ? (
-                        [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)
+                        [1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)
                     ) : transactions.length === 0 ? (
-                        <p className="text-slate-500 text-center py-4">No recent activity</p>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 text-center"
+                        >
+                            <div className="text-4xl mb-3">💸</div>
+                            <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">No transactions yet</p>
+                            <p className="text-slate-300 dark:text-slate-600 text-xs mt-1">Send or receive money to get started</p>
+                        </motion.div>
                     ) : (
-                        transactions.map(tx => (
-                            <div key={tx.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center">
+                        transactions.map((tx, index) => (
+                            <motion.div
+                                key={tx.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="bg-white dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex justify-between items-center hover:shadow-md dark:hover:bg-slate-800 transition-all duration-300"
+                            >
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-full ${tx.direction === 'in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                        {tx.direction === 'in' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.direction === 'in'
+                                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                                            : 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                                        }`}>
+                                        {tx.direction === 'in' ? <ArrowDownLeft className="w-4.5 h-4.5" /> : <ArrowUpRight className="w-4.5 h-4.5" />}
                                     </div>
                                     <div>
-                                        <p className="font-medium">{tx.direction === 'in' ? 'Received' : 'Sent'}</p>
-                                        <p className="text-xs text-slate-400">{tx.timestamp?.toDate().toLocaleDateString()}</p>
+                                        <p className="font-semibold text-sm dark:text-white">
+                                            {tx.direction === 'in' ? 'Received' : 'Sent'}
+                                            {tx.category && tx.category !== 'Transfer' && ` · ${tx.category}`}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                            {tx.timestamp?.toDate?.()?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || 'Just now'}
+                                        </p>
                                     </div>
                                 </div>
-                                <span className={`font-bold ${tx.direction === 'in' ? 'text-green-600' : 'text-slate-900'}`}>
+                                <span className={`font-bold text-sm ${tx.direction === 'in'
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-900 dark:text-white'
+                                    }`}>
                                     {tx.direction === 'in' ? '+' : '-'}{formatCurrency(tx.amount)}
                                 </span>
-                            </div>
+                            </motion.div>
                         ))
                     )}
                 </div>
-            </section>
+            </motion.section>
         </div>
     );
 };
