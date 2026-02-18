@@ -9,23 +9,15 @@ import {
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-export interface UserProfile {
-    uid: string;
-    email: string;
-    displayName: string;
-    pin: string;
-    balance: number;
-    savings: number;
-    accountNumber: string;
-    createdAt?: string;
-}
+import type { UserProfile } from '../types/user';
+import { ensureUniqueAccountNumber } from '../utils/accountGenerator';
 
 interface AuthContextType {
     user: User | null;
     profile: UserProfile | null;
     loading: boolean;
     login: (email: string, pass: string) => Promise<void>;
-    register: (email: string, pass: string, name: string, pin: string) => Promise<void>;
+    register: (email: string, pass: string, name: string, pin: string, phone: string) => Promise<void>;
     logout: () => Promise<void>;
     verifyPin: (pin: string) => Promise<boolean>;
     refreshProfile: () => Promise<void>;
@@ -55,10 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return unsubscribeAuth;
     }, []);
 
-    // Real-time profile listener — auto-updates balance after transfers
+    // Real-time profile listener
     useEffect(() => {
         if (!user) return;
-
         const docRef = doc(db, 'users', user.uid);
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -69,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Profile listener error:', error);
             setLoading(false);
         });
-
         return unsubscribe;
     }, [user]);
 
@@ -77,21 +67,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await signInWithEmailAndPassword(auth, email, pass);
     };
 
-    const register = async (email: string, pass: string, name: string, pin: string) => {
+    const register = async (email: string, pass: string, name: string, pin: string, phone: string) => {
         if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
             throw new Error('PIN must be exactly 6 digits');
         }
+
+        // 1. Create Auth User
         const { user: newUser } = await createUserWithEmailAndPassword(auth, email, pass);
+
+        // 2. Generate Unique Account Number
+        const accountNumber = await ensureUniqueAccountNumber();
+
+        // 3. Create Profile
         const newProfile: UserProfile = {
             uid: newUser.uid,
             email: newUser.email!,
             displayName: name || 'User',
+            phone,
             pin,
-            balance: 1000,
+            balance: 0, // Start with 0
             savings: 0,
-            accountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
+            accountNumber,
+            alias: '', // Empty initially, triggers AliasModal
+            cards: [], // Empty initially
             createdAt: new Date().toISOString(),
         };
+
         await setDoc(doc(db, 'users', newUser.uid), newProfile);
         setProfile(newProfile);
     };

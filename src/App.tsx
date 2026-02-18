@@ -23,6 +23,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState(''); // Added phone state
   const [pin, setPin] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +38,7 @@ const Login = () => {
         if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
           throw new Error('PIN must be exactly 6 digits');
         }
-        await register(email, pass, name, pin);
+        await register(email, pass, name, pin, phone);
       } else {
         await login(email, pass);
       }
@@ -248,6 +249,8 @@ const LoadingScreen = () => (
   </div>
 );
 
+import AliasModal from './components/AliasModal';
+
 // ═══════════════════════════════════════════════
 //  PROTECTED ROUTE
 // ═══════════════════════════════════════════════
@@ -255,7 +258,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!user) return <Login />;
-  return <>{children}</>;
+  return (
+    <>
+      <AliasModal />
+      {children}
+    </>
+  );
 };
 
 // ═══════════════════════════════════════════════
