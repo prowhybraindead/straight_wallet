@@ -272,26 +272,17 @@ function App() {
               className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700',
             }}
           />
-          <div className="min-h-screen bg-slate-200 dark:bg-slate-950 flex items-center justify-center p-2 sm:p-4 transition-colors duration-300">
-            <div className="w-full max-w-[420px] bg-white dark:bg-slate-900 min-h-[750px] h-[90vh] rounded-[40px] shadow-2xl dark:shadow-black/50 overflow-hidden relative border-[6px] border-slate-900 dark:border-slate-700 ring-2 ring-slate-300 dark:ring-slate-600">
-              {/* Notch */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-900 dark:bg-slate-700 rounded-b-2xl z-50 flex items-center justify-center">
-                <div className="w-12 h-1.5 bg-slate-700 dark:bg-slate-600 rounded-full" />
-              </div>
-
-              <div className="h-full overflow-y-auto no-scrollbar scroll-smooth">
-                <Routes>
-                  <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
-                  <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
-                  <Route path="/transfer" element={<ProtectedRoute><Layout><Transfer /></Layout></ProtectedRoute>} />
-                  <Route path="/receive" element={<ProtectedRoute><Layout><Receive /></Layout></ProtectedRoute>} />
-                  <Route path="/analysis" element={<ProtectedRoute><Layout><Analysis /></Layout></ProtectedRoute>} />
-                  <Route path="/savings" element={<ProtectedRoute><Layout><Savings /></Layout></ProtectedRoute>} />
-                  <Route path="/card" element={<ProtectedRoute><Layout><Card /></Layout></ProtectedRoute>} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </div>
-            </div>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
+            <Routes>
+              <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+              <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
+              <Route path="/transfer" element={<ProtectedRoute><Layout><Transfer /></Layout></ProtectedRoute>} />
+              <Route path="/receive" element={<ProtectedRoute><Layout><Receive /></Layout></ProtectedRoute>} />
+              <Route path="/analysis" element={<ProtectedRoute><Layout><Analysis /></Layout></ProtectedRoute>} />
+              <Route path="/savings" element={<ProtectedRoute><Layout><Savings /></Layout></ProtectedRoute>} />
+              <Route path="/card" element={<ProtectedRoute><Layout><Card /></Layout></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
           </div>
         </AuthProvider>
       </Router>

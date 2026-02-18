@@ -17,7 +17,7 @@ const BottomNav: React.FC = () => {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50">
             <div className="glass dark:glass-dark border-t border-white/20 dark:border-white/5 px-4 py-2 pb-6 safe-area-bottom">
                 <div className="flex justify-between items-center max-w-md mx-auto">
                     {tabs.map((tab) => {

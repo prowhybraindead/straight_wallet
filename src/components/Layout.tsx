@@ -7,9 +7,11 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300">
-            <main className="pb-24">{children}</main>
-            <BottomNav />
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans transition-colors duration-300 flex justify-center">
+            <div className="w-full max-w-md relative pb-24">
+                <main>{children}</main>
+                <BottomNav />
+            </div>
         </div>
     );
 };
