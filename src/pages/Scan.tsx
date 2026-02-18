@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Zap, Smartphone, CreditCard, Camera } from 'lucide-react';
+import { X, Zap, CreditCard, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -133,7 +133,6 @@ const Scan: React.FC = () => {
                             onScan={handleScan}
                             onError={handleError}
                             components={{
-                                audio: false,
                                 onOff: false,
                                 torch: false,
                                 zoom: false,
