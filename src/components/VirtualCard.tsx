@@ -54,7 +54,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance }) => {
 
                 {/* Back */}
                 <div
-                    className="absolute w-full h-full backface-hidden rounded-2xl bg-gradient-to-bl from-slate-800 to-slate-900 p-6 shadow-xl flex flex-col justify-between"
+                    className="absolute w-full h-full backface-hidden rounded-2xl bg-gradient-to-bl from-slate-800 to-slate-900 p-6 shadow-xl flex flex-col justify-between rotate-y-180"
                     style={{ transform: "rotateY(180deg)" }}
                 >
                     <div className="w-full h-10 bg-black/40 -mx-6 mt-4"></div>
