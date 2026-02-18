@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CreditCard, Shield, ChevronRight, AlertCircle } from 'lucide-react';
+import { Plus, CreditCard, Shield, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { createNewCard } from '../utils/cardGenerator';
 import type { Card as CardType, CardScheme } from '../types/user';
+import CardDetailView from '../components/CardDetailView';
 
 const SCHEMES: { id: CardScheme; name: string; gradient: string }[] = [
     { id: 'VISA', name: 'Visa Signature', gradient: 'bg-gradient-to-br from-blue-600 to-indigo-900' },
@@ -19,7 +20,7 @@ const CardPage = () => {
     const { user, profile } = useAuth();
     const [isIssuing, setIsIssuing] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [flippedId, setFlippedId] = useState<string | null>(null);
+    const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
 
     const handleIssueCard = async (scheme: CardScheme) => {
         if (!user || !profile) return;
@@ -27,7 +28,6 @@ const CardPage = () => {
         try {
             const newCard = createNewCard(scheme, profile.displayName || 'VALUED MEMBER');
 
-            // Optimistic update (UI will update via listener, but good practice)
             await updateDoc(doc(db, 'users', user.uid), {
                 cards: arrayUnion(newCard)
             });
@@ -68,15 +68,11 @@ const CardPage = () => {
     );
 
     const CardItem = ({ card }: { card: CardType }) => {
-        const isFlipped = flippedId === card.id;
-
-        // Map saved theme to actual CSS class (ensuring we match the generator's logic)
-        // Generator uses: gradient-blue, gradient-black, metallic-silver, gradient-green
         const getBgClass = (theme: string) => {
             switch (theme) {
                 case 'gradient-blue': return 'bg-gradient-to-br from-blue-600 to-indigo-900';
                 case 'gradient-black': return 'bg-gradient-to-br from-slate-800 to-black';
-                case 'metallic-silver': return 'bg-gradient-to-br from-gray-300 via-gray-100 to-gray-400 text-slate-800'; // Amex often light
+                case 'metallic-silver': return 'bg-gradient-to-br from-gray-300 via-gray-100 to-gray-400 text-slate-800';
                 case 'gradient-green': return 'bg-gradient-to-br from-emerald-600 to-teal-900';
                 default: return 'bg-slate-800';
             }
@@ -88,67 +84,40 @@ const CardPage = () => {
 
         return (
             <motion.div
-                layout
-                onClick={() => setFlippedId(isFlipped ? null : card.id)}
-                className="relative w-full aspect-[1.586] perspective-1000 cursor-pointer mb-4"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedCard(card)}
+                className="relative w-full aspect-[1.586] cursor-pointer mb-4 drop-shadow-xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <motion.div
-                    className="w-full h-full relative preserve-3d transition-transform duration-500"
-                    animate={{ rotateY: isFlipped ? 180 : 0 }}
-                >
-                    {/* FRONT */}
-                    <div className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}>
-                        {/* Shine effect */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className={`absolute inset-0 rounded-2xl p-6 shadow-xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}>
+                    {/* Shine effect */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
-                        <div className="flex justify-between items-start">
-                            <span className="font-bold tracking-wider">{card.scheme}</span>
-                            <div className="flex items-center gap-1">
-                                {card.status === 'LOCKED' && <Shield className="w-4 h-4 text-red-400" />}
-                                <div className="w-8 h-5 bg-yellow-200/80 rounded" /> {/* Chip */}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 relative z-10">
-                            <p className="font-mono text-xl tracking-[0.15em] drop-shadow-md">
-                                {card.number.match(/.{1,4}/g)?.join(' ') || card.number}
-                            </p>
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Card Holder</p>
-                                    <p className="font-medium tracking-wide truncate max-w-[180px]">{card.holderName}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Expires</p>
-                                    <p className="font-medium tracking-wide">{card.expiry}</p>
-                                </div>
-                            </div>
+                    <div className="flex justify-between items-start">
+                        <span className="font-bold tracking-wider">{card.scheme}</span>
+                        <div className="flex items-center gap-1">
+                            {card.status === 'LOCKED' && <Shield className="w-4 h-4 text-red-400" />}
+                            <div className="w-8 h-5 bg-yellow-200/80 rounded" /> {/* Chip */}
                         </div>
                     </div>
 
-                    {/* BACK */}
-                    <div
-                        className={`absolute inset-0 backface-hidden rounded-2xl shadow-xl ${bgClass} flex flex-col justify-center overflow-hidden border border-white/10`}
-                        style={{ transform: 'rotateY(180deg)' }}
-                    >
-                        <div className="w-full h-10 bg-black/80 mt-4 mb-4" />
-                        <div className="px-6 relative">
-                            <div className="w-[80%] h-10 bg-white/20 flex items-center justify-end px-3">
-                                <p className="font-mono text-black font-bold italic tracking-widest">{card.cvv}</p>
+                    <div className="space-y-4 relative z-10">
+                        <p className="font-mono text-xl tracking-[0.15em] drop-shadow-md">
+                            {card.number.match(/.{1,4}/g)?.join(' ') || card.number}
+                        </p>
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Card Holder</p>
+                                <p className="font-medium tracking-wide truncate max-w-[180px]">{card.holderName}</p>
                             </div>
-                            <p className={`text-[10px] mt-2 ${labelColor}`}>
-                                CVC / CVV
-                            </p>
-                        </div>
-                        <div className="flex-1" />
-                        <div className="p-4 flex justify-between items-center bg-black/10">
-                            <AlertCircle className={`w-4 h-4 ${labelColor}`} />
-                            <span className={`text-[10px] ${labelColor}`}>Do not share this code</span>
+                            <div className="text-right">
+                                <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Expires</p>
+                                <p className="font-medium tracking-wide">{card.expiry}</p>
+                            </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
             </motion.div>
         );
     };
@@ -180,7 +149,7 @@ const CardPage = () => {
             {/* Issuance Sheet/Modal */}
             <AnimatePresence>
                 {isIssuing && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
+                    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -208,7 +177,6 @@ const CardPage = () => {
                                         disabled={loading}
                                         className={`w-full p-4 rounded-xl flex items-center justify-between group overflow-hidden relative border border-slate-100 dark:border-slate-800 hover:border-primary-500/50 transition-all ${loading ? 'opacity-50' : ''}`}
                                     >
-                                        {/* Background gradient hint */}
                                         <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity ${s.gradient}`} />
 
                                         <div className="flex items-center gap-4 relative z-10">
@@ -226,6 +194,13 @@ const CardPage = () => {
                             </div>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* Card Detail View Modal */}
+            <AnimatePresence>
+                {selectedCard && (
+                    <CardDetailView card={selectedCard} onClose={() => setSelectedCard(null)} />
                 )}
             </AnimatePresence>
         </div>
