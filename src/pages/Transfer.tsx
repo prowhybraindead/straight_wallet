@@ -177,10 +177,10 @@ const Transfer: React.FC = () => {
                                 <input
                                     type="text"
                                     className="w-full p-4 pr-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-lg font-mono tracking-wider focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-all"
-                                    placeholder="Enter 10-digit number"
+                                    placeholder="Enter 14-16 digit number"
                                     value={accountNum}
-                                    onChange={e => setAccountNum(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    maxLength={10}
+                                    onChange={e => setAccountNum(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                                    maxLength={16}
                                 />
                                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 dark:text-slate-600" />
                             </div>
@@ -189,7 +189,7 @@ const Transfer: React.FC = () => {
                         <motion.button
                             whileTap={{ scale: 0.97 }}
                             onClick={() => handleLookup()}
-                            disabled={accountNum.length < 5 || lookingUp}
+                            disabled={accountNum.length < 14 || lookingUp} // Validating min 14 digits
                             className="w-full py-4 rounded-2xl font-bold bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/20 disabled:opacity-40 flex items-center justify-center gap-2 transition-all"
                         >
                             {lookingUp ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Find Account'}
@@ -234,8 +234,8 @@ const Transfer: React.FC = () => {
                                         whileTap={{ scale: 0.9 }}
                                         onClick={() => setAmount(qa.toString())}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${amount === qa.toString()
-                                                ? 'bg-primary-500 text-white shadow-sm'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                            ? 'bg-primary-500 text-white shadow-sm'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                             }`}
                                     >
                                         ${qa}
@@ -255,8 +255,8 @@ const Transfer: React.FC = () => {
                                         key={cat}
                                         onClick={() => setCategory(cat)}
                                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${category === cat
-                                                ? 'bg-primary-500 text-white'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                            ? 'bg-primary-500 text-white'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                                             }`}
                                     >
                                         {cat}

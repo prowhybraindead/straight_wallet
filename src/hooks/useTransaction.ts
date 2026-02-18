@@ -19,6 +19,7 @@ export interface Transaction {
     status: string;
     timestamp: any;
     direction?: 'in' | 'out';
+    sourceId?: string; // Account Number or Card ID
 }
 
 export interface SavingsJar {
@@ -45,16 +46,22 @@ export const useTransaction = () => {
         return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() } as any;
     };
 
-    const sendMoney = async (recipientAccountNumber: string, amount: number, category: string = 'Transfer') => {
+    const sendMoney = async (recipientAccountNumber: string, amount: number, category: string = 'Transfer', sourceId?: string) => {
         if (!user || !profile) throw new Error('Not authenticated');
         if (amount <= 0) throw new Error('Amount must be positive');
         setLoading(true);
         setError(null);
 
+        const actualSourceId = sourceId || profile.accountNumber;
+
         try {
             const recipientData = await getUserByAccount(recipientAccountNumber);
+            // Allow sending to self if using different accounts/cards? For now block self-sending P2P
+            if (recipientData && recipientData.uid === user.uid) throw new Error('Cannot send to yourself!');
+
+            // Note: If recipient not found via Account Number, in a real app check Card Number here.
+            // For MVP strictness, we require Account Number for P2P unless we add a specific Card Lookup.
             if (!recipientData) throw new Error('Recipient account not found!');
-            if (recipientData.uid === user.uid) throw new Error('Cannot send to yourself!');
 
             await runTransaction(db, async (transaction) => {
                 const senderRef = doc(db, 'users', user.uid);
@@ -83,6 +90,7 @@ export const useTransaction = () => {
                     category,
                     status: 'completed',
                     timestamp: serverTimestamp(),
+                    sourceId: actualSourceId
                 });
             });
         } catch (err: any) {
