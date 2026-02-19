@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
     runTransaction, doc, collection, serverTimestamp,
     query, where, getDocs, getDoc, orderBy, limit, addDoc,
-    deleteDoc
+    deleteDoc, increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -94,11 +94,12 @@ export const useTransaction = () => {
                 if (!senderDoc.exists()) throw new Error('Sender does not exist!');
                 if (!recipientDoc.exists()) throw new Error('Recipient does not exist!');
 
-                const senderBalance = senderDoc.data().balance;
+                const senderBalance = senderDoc.data().mainBalance || 0; // Fixed: mainBalance
                 if (senderBalance < amount) throw new Error('Insufficient funds!');
 
-                transaction.update(senderRef, { balance: senderBalance - amount });
-                transaction.update(recipientRef, { balance: recipientDoc.data().balance + amount });
+                // Atomic Updates
+                transaction.update(senderRef, { mainBalance: increment(-amount) });
+                transaction.update(recipientRef, { mainBalance: increment(amount) });
 
                 const transactionRef = doc(collection(db, 'transactions'));
                 transaction.set(transactionRef, {
@@ -165,11 +166,11 @@ export const useTransaction = () => {
                 if (!userDoc.exists()) throw new Error('User not found');
                 if (!jarDoc.exists()) throw new Error('Jar not found');
 
-                const balance = userDoc.data().balance;
+                const balance = userDoc.data().mainBalance || 0; // Fixed: mainBalance
                 if (balance < amount) throw new Error('Insufficient funds!');
 
-                transaction.update(userRef, { balance: balance - amount });
-                transaction.update(jarRef, { current: jarDoc.data().current + amount });
+                transaction.update(userRef, { mainBalance: increment(-amount) });
+                transaction.update(jarRef, { current: increment(amount) });
 
                 const txRef = doc(collection(db, 'transactions'));
                 transaction.set(txRef, {
@@ -209,8 +210,8 @@ export const useTransaction = () => {
                 const jarCurrent = jarDoc.data().current;
                 if (jarCurrent < amount) throw new Error('Insufficient jar balance!');
 
-                transaction.update(userRef, { balance: userDoc.data().balance + amount });
-                transaction.update(jarRef, { current: jarCurrent - amount });
+                transaction.update(userRef, { mainBalance: increment(amount) }); // Fixed: mainBalance
+                transaction.update(jarRef, { current: increment(-amount) });
 
                 const txRef = doc(collection(db, 'transactions'));
                 transaction.set(txRef, {
