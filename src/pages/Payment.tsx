@@ -4,18 +4,21 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Shield, CreditCard, Loader2, CheckCircle, ArrowLeft, Store } from 'lucide-react';
+import { db } from '../firebase'; // Correct path to initialized Client SDK
+import { doc, runTransaction, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const Payment: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { profile, verifyPin } = useAuth();
 
-    // State for Transaction Params
+    // Transaction State
     const [transactionId, setTransactionId] = useState('');
-    const [merchant, setMerchant] = useState('Merchant');
+    const [merchantName, setMerchantName] = useState('Loading...');
     const [amount, setAmount] = useState('0.00');
+    const [loaded, setLoaded] = useState(false);
 
-    // State for User Interaction
+    // User Input State
     const [selectedCard, setSelectedCard] = useState<string>('');
     const [pin, setPin] = useState('');
     const [loading, setLoading] = useState(false);
@@ -23,40 +26,36 @@ const Payment: React.FC = () => {
 
     useEffect(() => {
         const tid = searchParams.get('transactionId');
-        const mName = searchParams.get('merchant');
-        const amt = searchParams.get('amount');
+        if (!tid) return;
+        setTransactionId(tid);
 
-        if (mName) setMerchant(mName);
-        if (amt) setAmount(amt);
-
-        if (tid) {
-            setTransactionId(tid);
-            // Auto-select first card
-            if (profile?.cards && profile.cards.length > 0) {
-                setSelectedCard(profile.cards[0].number);
+        // Fetch Transaction Details to Display Amount/Merchant
+        // This is a READ-ONLY fetch for UI. The actual atomic check happens in runTransaction.
+        async function fetchDetails() {
+            try {
+                const docRef = doc(db, 'transactions', tid!);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setAmount(data.amount.toFixed(2));
+                    setMerchantName(data.merchantName || 'Merchant');
+                    setLoaded(true);
+                } else {
+                    toast.error("Transaction not found");
+                    navigate('/');
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error("Failed to load transaction");
             }
         }
-    }, [searchParams, profile]);
+        fetchDetails();
 
-    // Defensive: Debug UI for missing params
-    if (!searchParams.get('transactionId')) {
-        return (
-            <div className="p-4 bg-slate-900 text-yellow-400 min-h-screen font-mono text-xs flex flex-col justify-center">
-                <h1 className="text-xl font-bold mb-4 text-white">Debug Mode: Missing Params</h1>
-                <p className="mb-2">Param 'transactionId' is missing.</p>
-                <div className="bg-black p-4 rounded-xl border border-white/10 overflow-auto mb-8">
-                    <p className="text-slate-500 mb-2">// Current URL Params:</p>
-                    <pre>{JSON.stringify(Object.fromEntries([...searchParams]), null, 2)}</pre>
-                </div>
-                <button
-                    onClick={() => navigate('/')}
-                    className="w-full py-4 bg-white/10 hover:bg-white/20 px-4 rounded-xl text-white font-bold transition-colors"
-                >
-                    Go Home
-                </button>
-            </div>
-        );
-    }
+        // Auto-select card
+        if (profile?.cards?.length) {
+            setSelectedCard(profile.cards[0].number);
+        }
+    }, [searchParams, navigate, profile]);
 
     const handlePayment = async () => {
         if (!pin || pin.length !== 6) {
@@ -66,7 +65,7 @@ const Payment: React.FC = () => {
 
         setLoading(true);
         try {
-            // 1. Verify PIN (Client/Wallet Side)
+            // 1. Client Logic: Hash Check (Optional optimization, strictly done in security rules or trusted env)
             const isPinValid = await verifyPin(pin);
             if (!isPinValid) {
                 toast.error('Incorrect PIN');
@@ -74,42 +73,74 @@ const Payment: React.FC = () => {
                 return;
             }
 
-            // 2. Call Core API (New Public Endpoint)
-            const coreUrl = import.meta.env.VITE_CORE_API_URL;
+            // 2. ATOMIC FIRESTORE TRANSACTION
+            await runTransaction(db, async (transaction) => {
+                const txRef = doc(db, 'transactions', transactionId);
+                const userRef = doc(db, 'users', profile!.uid);
 
-            // DIAGNOSTIC START
-            if (!coreUrl) {
-                alert("CRITICAL CONFIG ERROR: VITE_CORE_API_URL is undefined.\nPlease check your Vercel/Hosting Environment Variables.");
-                setLoading(false);
-                return;
-            }
+                // READS (Must come before Writes)
+                const txDoc = await transaction.get(txRef);
+                const userDoc = await transaction.get(userRef);
 
-            const response = await fetch(`${coreUrl}/api/v1/process-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    transactionId,
-                    cardNumber: selectedCard,
-                    pin
-                })
+                if (!txDoc.exists()) throw new Error("Transaction does not exist!");
+                if (!userDoc.exists()) throw new Error("User profile not found!");
+
+                const txData = txDoc.data();
+                const userData = userDoc.data();
+
+                // Idempotency & Status Check
+                if (txData.status === 'COMPLETED') throw new Error("Transaction already completed!");
+                if (txData.status === 'FAILED') throw new Error("Transaction Failed/Expired!");
+
+                // Balance Check (Single-Source Debit)
+                const chargeAmount = txData.amount;
+                const currentBalance = userData.mainBalance || 0;
+
+                if (currentBalance < chargeAmount) {
+                    throw new Error(`Insufficient Funds. Balance: $${currentBalance}`);
+                }
+
+                // WRITES
+                // 1. Deduct from User
+                transaction.update(userRef, {
+                    mainBalance: currentBalance - chargeAmount
+                });
+
+                // 2. Credit Merchant
+                if (txData.merchantId) {
+                    const merchantRef = doc(db, 'merchants', txData.merchantId);
+                    // Note: We use increment() in typical SDKs, but inside transaction we can read-modify-write.
+                    // However, to be safe/simple without reading merchant doc (saving a read), we can use FieldValue.increment if supported in update.
+                    // But runTransaction requires Reads before Writes. 
+                    // Let's assume we just want to update the transaction status primarily, 
+                    // and maybe the merchant balance can be handled by a Cloud Function trigger if we want to save Reads?
+                    // "Prompt says: Write 2: Increment Amount to merchants/{merchantId}"
+                    // So we must read it or use a blind update if allowed.
+                    // Optimistic update:
+                    // transaction.update(merchantRef, { balance: increment(chargeAmount) }); // If import exists
+                    // Let's TRY to read it to be safe, assuming low contention.
+                    const merchDoc = await transaction.get(merchantRef);
+                    if (merchDoc.exists()) {
+                        const newMerchBal = (merchDoc.data().balance || 0) + chargeAmount;
+                        transaction.update(merchantRef, { balance: newMerchBal });
+                    }
+                }
+
+                // 3. Complete Transaction
+                transaction.update(txRef, {
+                    status: 'COMPLETED',
+                    payerId: profile!.uid,
+                    paymentMethod: 'DEBIT',
+                    processedAt: serverTimestamp()
+                });
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Payment Failed');
-            }
 
             setSuccess(true);
             toast.success('Payment Successful!');
 
         } catch (error: any) {
-            console.error(error);
-            // NETWORK/CORS ERROR TRAP
-            alert(`PRODUCTION ERROR:\n${error.message}\n\nTroubleshooting:\n1. If "Failed to fetch": Check CORS on Core.\n2. Check if URL is correct.`);
-            toast.error(error.message || 'Connection Error');
+            console.error("Transaction Failed:", error);
+            toast.error(error.message || 'Payment processing failed');
         } finally {
             setLoading(false);
         }
@@ -127,29 +158,24 @@ const Payment: React.FC = () => {
                 </motion.div>
                 <h2 className="text-2xl font-bold dark:text-white mb-2">Payment Sent!</h2>
                 <p className="text-slate-500 text-sm mb-8 text-center max-w-xs">
-                    Transaction {transactionId.slice(0, 8)}... has been processed.
+                    Transaction Completed.
                 </p>
-                <button
-                    onClick={() => navigate('/')}
-                    className="w-full py-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold"
-                >
+                <button onClick={() => navigate('/')} className="w-full py-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold">
                     Return Home
                 </button>
             </div>
         );
     }
 
+    if (!loaded) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-white" /></div>;
+
     return (
         <div className="p-5 pt-8 max-w-md mx-auto">
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 mb-8"
-            >
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 mb-8">
                 <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <h1 className="text-2xl font-black dark:text-white">Checkout</h1>
+                <h1 className="text-2xl font-black dark:text-white">Confirm Pay</h1>
             </motion.div>
 
             <div className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-2xl mb-8 border border-slate-200 dark:border-slate-700">
@@ -159,12 +185,12 @@ const Payment: React.FC = () => {
                     </div>
                     <div>
                         <p className="text-xs uppercase font-bold text-slate-500">Paying</p>
-                        <p className="font-bold text-lg dark:text-white">{(merchant || 'Unknown').toUpperCase()}</p>
+                        <p className="font-bold text-lg dark:text-white">{merchantName}</p>
                     </div>
                 </div>
                 <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
                     <span className="text-slate-500 text-sm">Amount</span>
-                    <span className="text-xl font-black dark:text-white">${parseFloat(amount).toFixed(2)}</span>
+                    <span className="text-xl font-black dark:text-white">${amount}</span>
                 </div>
             </div>
 
@@ -172,64 +198,34 @@ const Payment: React.FC = () => {
             <div className="mb-8">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">Pay with</label>
                 <div className="space-y-3">
-                    {/* CRITICAL FIX: Safe Optional Chaining for profile.cards */}
-                    {profile?.cards?.length ? (
-                        profile.cards.map((card: any) => (
-                            <div
-                                key={card.number}
-                                onClick={() => setSelectedCard(card.number)}
-                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${selectedCard === card.number
-                                    ? 'border-primary-500 bg-primary-500/5'
-                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                                    }`}
-                            >
-                                <CreditCard className={`w-6 h-6 ${selectedCard === card.number ? 'text-primary-500' : 'text-slate-400'}`} />
-                                <div>
-                                    <p className="font-bold text-sm dark:text-white">
-                                        {card.provider ? card.provider.toUpperCase() : 'CARD'} <span className="text-slate-500">•••• {card.number.slice(-4)}</span>
-                                    </p>
-                                </div>
-                                {selectedCard === card.number && (
-                                    <div className="ml-auto w-4 h-4 bg-primary-500 rounded-full" />
-                                )}
+                    {profile?.cards?.map((card: any) => (
+                        <div key={card.number} onClick={() => setSelectedCard(card.number)}
+                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${selectedCard === card.number ? 'border-primary-500 bg-primary-500/5' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
+                            <CreditCard className={`w-6 h-6 ${selectedCard === card.number ? 'text-primary-500' : 'text-slate-400'}`} />
+                            <div>
+                                <p className="font-bold text-sm dark:text-white">
+                                    {card.provider ? card.provider.toUpperCase() : 'DEBIT'} <span className="text-slate-500">•••• {card.number.slice(-4)}</span>
+                                </p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-sm text-slate-500 flex flex-col items-center gap-2">
-                            <CreditCard className="w-8 h-8 text-slate-300" />
-                            <p>No cards found</p>
-                            <button onClick={() => navigate('/card')} className="text-primary-500 font-bold text-xs hover:underline">
-                                Add a Card
-                            </button>
+                            {selectedCard === card.number && <div className="ml-auto w-4 h-4 bg-primary-500 rounded-full" />}
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
 
             {/* PIN Entry */}
             <div className="mb-8">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
-                    Confirm with PIN
-                </label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">Security PIN</label>
                 <div className="relative">
                     <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                        type="password"
-                        maxLength={6}
-                        className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-primary-500 transition-all"
-                        placeholder="••••••"
-                        value={pin}
-                        onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                    />
+                    <input type="password" maxLength={6} className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-primary-500"
+                        placeholder="••••••" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
                 </div>
             </div>
 
-            <button
-                onClick={handlePayment}
-                disabled={loading || !selectedCard || pin.length !== 6}
-                className="w-full py-4 bg-gradient-to-r from-primary-500 to-indigo-600 hover:from-primary-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-            >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Payment'}
+            <button onClick={handlePayment} disabled={loading || !selectedCard || pin.length !== 6}
+                className="w-full py-4 bg-gradient-to-r from-primary-500 to-indigo-600 hover:from-primary-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/25 disabled:opacity-50 flex items-center justify-center gap-2">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Execute Payment'}
             </button>
         </div>
     );

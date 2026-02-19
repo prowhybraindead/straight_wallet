@@ -94,7 +94,7 @@ export const createNewCard = (scheme: CardScheme, holderName: string): Card => {
         number: generateCardNumber(scheme),
         cvv: generateCVV(scheme),
         expiry: generateExpiry(),
-        balance: 0, // Initial balance link
+        // balance: 0, // REMOVED
         status: 'ACTIVE',
         colorTheme: THEME_MAP[scheme],
         holderName: holderName.toUpperCase(),

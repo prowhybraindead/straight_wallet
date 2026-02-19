@@ -103,7 +103,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                {showBalance ? formatCurrency(profile?.balance || 0) : '••••••'}
+                                {showBalance ? formatCurrency(profile?.mainBalance || 0) : '••••••'}
                             </motion.h2>
                         </div>
                     </div>

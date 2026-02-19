@@ -220,7 +220,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 uppercase tracking-widest">Available</span>
                         <span className="text-emerald-400 font-bold font-mono">
-                            ${(userAuth?.profile?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            ${(userAuth?.profile?.mainBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                     </div>
                 </div>

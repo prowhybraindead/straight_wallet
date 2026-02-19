@@ -334,7 +334,7 @@ const Savings: React.FC = () => {
 
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 {actionType === 'deposit'
-                                    ? `Available balance: ${formatCurrency(profile?.balance || 0)}`
+                                    ? `Available balance: ${formatCurrency(profile?.mainBalance || 0)}`
                                     : `Jar balance: ${formatCurrency(jars.find(j => j.id === activeJar)?.current || 0)}`
                                 }
                             </p>
@@ -352,8 +352,8 @@ const Savings: React.FC = () => {
                                 onClick={handleAction}
                                 disabled={loading || !actionAmount}
                                 className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 ${actionType === 'deposit'
-                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                                        : 'bg-gradient-to-r from-rose-500 to-pink-500'
+                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                                    : 'bg-gradient-to-r from-rose-500 to-pink-500'
                                     }`}
                             >
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (actionType === 'deposit' ? 'Deposit' : 'Withdraw')}

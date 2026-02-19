@@ -30,62 +30,43 @@ const Scan: React.FC = () => {
         const rawData = detectedCodes[0].rawValue;
         if (!rawData) return;
 
-        // Requirement 16.1: Log raw data
-        console.log("Raw Scanned Data:", rawData);
-
         setProcessing(true);
         setResult(rawData);
-        setCameraActive(false); // Pause camera
+        setCameraActive(false);
 
         try {
-            // Requirement 16.2: Try-Parse Logic
+            // STRICT JSON PARSING
             const data = JSON.parse(rawData);
 
-            // CASE A: TrainCredit Core Payment QR
-            if ((data.type === 'PAYMENT' || data.type === 'TRAIN_PAY') && (data.trId || data.trxId || data.transactionId)) {
-                const id = data.trId || data.trxId || data.transactionId;
-                const amount = data.amount || '0';
-                const merchant = data.merchantName || data.merchant || 'Merchant';
+            // CASE A: NEW PAYMENT FLOW
+            if (data.type === 'PAYMENT' && data.trId) {
                 toast.success("Payment QR Detected");
                 setTimeout(() => {
-                    navigate(`/payment?transactionId=${id}&amount=${amount}&merchant=${encodeURIComponent(merchant)}`);
+                    // Navigate to Confirmation Screen
+                    navigate(`/payment?transactionId=${data.trId}&merchant=${encodeURIComponent(data.merchantName || 'Merchant')}`);
                 }, 800);
                 return;
             }
 
-            // CASE B: P2P Receive QR (Internal)
-            if ((data.type === 'P2P_RECEIVE' || data.type === 'P2P') && (data.target || data.account)) {
-                const target = data.target || data.account;
-                toast.success(`Found User: ${data.name || target}`);
+            // CASE B: P2P RECEIVE
+            if (data.type === 'P2P_RECEIVE' && data.target) {
+                toast.success(`Found User: ${data.name || 'Unknown'}`);
                 setTimeout(() => {
-                    navigate(`/transfer?to=${target}&name=${encodeURIComponent(data.name || '')}`);
+                    navigate(`/transfer?to=${data.target}&name=${encodeURIComponent(data.name || '')}`);
                 }, 800);
                 return;
             }
 
-            // CASE C: Invalid JSON Schema
-            toast.error("Invalid TrainCredit QR Format");
-            setProcessing(false);
-            setTimeout(() => setCameraActive(true), 1000);
+            throw new Error("Unknown QR Type");
 
         } catch (error) {
-            // CASE D: Legacy/External QR (URL or Plain Text)
+            // Fallback for Debugging or External Links
             if (rawData.startsWith('http')) {
-                toast.info("Opening external link...");
-                setTimeout(() => {
-                    window.location.href = rawData;
-                }, 800);
+                window.location.href = rawData;
             } else {
-                // Legacy P2P Fallback (P2P:12345)
-                if (rawData.startsWith('P2P:')) {
-                    const account = rawData.split(':')[1];
-                    toast.success(`Found account: ${account}`);
-                    setTimeout(() => navigate(`/transfer?to=${account}`), 800);
-                } else {
-                    toast.error("Unknown QR Type: " + rawData);
-                    setProcessing(false);
-                    setTimeout(() => setCameraActive(true), 1000);
-                }
+                toast.error("Invalid QR Code");
+                setProcessing(false);
+                setTimeout(() => setCameraActive(true), 1500);
             }
         }
     };

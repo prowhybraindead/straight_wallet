@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: name || 'User',
             phone,
             pin,
-            balance: 0, // Start with 0
+            mainBalance: 0, // CORRECT: Single-Source Debit Model
             savings: 0,
             accountNumber,
             alias: '', // Empty initially, triggers AliasModal
