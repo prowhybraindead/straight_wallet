@@ -51,12 +51,12 @@ const Scan: React.FC = () => {
                 const id = parsed.trxId || parsed.trId;
                 if (!id) throw new Error("Missing Transaction ID");
 
-                toast.info('Redirecting to Secure Gateway...');
-                const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-                const baseUrl = coreUrl.replace(/\/api\/?$/, '');
+                // toast.info('Redirecting to Secure Gateway...');
+                // const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
+                // const baseUrl = coreUrl.replace(/\/api\/?$/, '');
 
                 setTimeout(() => {
-                    window.location.href = `${baseUrl}/pay/${id}`;
+                    navigate(`/payment?transactionId=${id}`);
                 }, 800);
             } else {
                 toast.error('Unknown QR type: ' + parsed.type);
@@ -69,12 +69,9 @@ const Scan: React.FC = () => {
                 const account = data.split(':')[1];
                 toast.success(`Found account: ${account}`);
                 setTimeout(() => navigate(`/transfer?to=${account}`), 800);
-            } else if (data.startsWith('TRAIN_PAY:')) {
                 const id = data.split(':')[1];
-                const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-                const baseUrl = coreUrl.replace(/\/api\/?$/, '');
-                toast.info('Redirecting to payment...');
-                setTimeout(() => { window.location.href = `${baseUrl}/pay/${id}`; }, 800);
+                // toast.info('Redirecting to payment...');
+                setTimeout(() => { navigate(`/payment?transactionId=${id}`); }, 800);
             } else {
                 toast.error('Unknown QR Format');
                 setProcessing(false);

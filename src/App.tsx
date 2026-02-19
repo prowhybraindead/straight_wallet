@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Scan from './pages/Scan';
 import Transfer from './pages/Transfer';
+import Payment from './pages/Payment';
 import Receive from './pages/Receive';
 import Analysis from './pages/Analysis';
 import Savings from './pages/Savings';
@@ -299,6 +300,7 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
               <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
               <Route path="/transfer" element={<ProtectedRoute><Layout><Transfer /></Layout></ProtectedRoute>} />
+              <Route path="/payment" element={<ProtectedRoute><Layout><Payment /></Layout></ProtectedRoute>} />
               <Route path="/receive" element={<ProtectedRoute><Layout><Receive /></Layout></ProtectedRoute>} />
               <Route path="/analysis" element={<ProtectedRoute><Layout><Analysis /></Layout></ProtectedRoute>} />
               <Route path="/savings" element={<ProtectedRoute><Layout><Savings /></Layout></ProtectedRoute>} />
