@@ -39,11 +39,32 @@ export const useTransaction = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const getUserByAccount = async (accountNumber: string) => {
-        const q = query(collection(db, 'users'), where('accountNumber', '==', accountNumber));
+    const getUserByAccount = async (accountNumberOrCard: string) => {
+        // 1. Try finding by Account Number (Indexed Query)
+        const q = query(collection(db, 'users'), where('accountNumber', '==', accountNumberOrCard));
         const snapshot = await getDocs(q);
-        if (snapshot.empty) return null;
-        return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() } as any;
+        if (!snapshot.empty) {
+            return { uid: snapshot.docs[0].id, ...snapshot.docs[0].data() } as any;
+        }
+
+        // 2. Fallback: Identify if input looks like a Card Number (15-16 digits)
+        const cleanInput = accountNumberOrCard.replace(/\D/g, '');
+        if (cleanInput.length >= 15 && cleanInput.length <= 16) {
+            // Note: In production, use a 'cards' collection group query or 'cardNumbers' array field.
+            // For this app size, we'll scan users to find the card owner.
+            const allUsersSnapshot = await getDocs(collection(db, 'users'));
+            for (const doc of allUsersSnapshot.docs) {
+                const userData = doc.data();
+                if (userData.cards && Array.isArray(userData.cards)) {
+                    const foundCard = userData.cards.find((c: any) => c.number === cleanInput);
+                    if (foundCard) {
+                        return { uid: doc.id, ...userData } as any;
+                    }
+                }
+            }
+        }
+
+        return null;
     };
 
     const sendMoney = async (recipientAccountNumber: string, amount: number, category: string = 'Transfer', sourceId?: string) => {

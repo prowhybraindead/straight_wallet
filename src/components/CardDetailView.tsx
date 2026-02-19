@@ -126,7 +126,10 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     onClick={() => !isRotating && setIsFlipped(!isFlipped)}
                 >
                     {/* === FRONT FACE === */}
-                    <div className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-2xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}>
+                    <div
+                        className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-2xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}
+                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                    >
                         {/* Shine effect */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
@@ -164,7 +167,11 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     {/* === BACK FACE (Asymmetric) === */}
                     <div
                         className={`absolute inset-0 backface-hidden rounded-2xl shadow-2xl bg-slate-800 text-white flex flex-col overflow-hidden border border-white/10`}
-                        style={{ transform: 'rotateY(180deg)' }}
+                        style={{
+                            transform: 'rotateY(180deg)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden'
+                        }}
                     >
                         {/* Magnetic Strip */}
                         <div className="w-full h-10 bg-black mt-5" />
