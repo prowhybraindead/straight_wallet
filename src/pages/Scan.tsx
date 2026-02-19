@@ -38,20 +38,28 @@ const Scan: React.FC = () => {
             // Try JSON format first
             const parsed = JSON.parse(data);
 
-            if (parsed.type === 'P2P') {
-                toast.success(`Found: ${parsed.name || 'User'}`);
+            // Handle P2P Transfers (Standardized & Legacy)
+            if (parsed.type === 'P2P' || parsed.type === 'P2P_RECEIVE') {
+                const target = parsed.account || parsed.target;
+                toast.success(`Found User: ${parsed.name || target}`);
                 setTimeout(() => {
-                    navigate(`/transfer?to=${parsed.account}&name=${encodeURIComponent(parsed.name || '')}`);
+                    navigate(`/transfer?to=${target}&name=${encodeURIComponent(parsed.name || '')}`);
                 }, 800);
-            } else if (parsed.type === 'TRAIN_PAY') {
-                toast.info('Redirecting to payment...');
+
+                // Handle Payment Gateway (Standardized & Legacy)
+            } else if (parsed.type === 'TRAIN_PAY' || parsed.type === 'PAYMENT') {
+                const id = parsed.trxId || parsed.trId;
+                if (!id) throw new Error("Missing Transaction ID");
+
+                toast.info('Redirecting to Secure Gateway...');
                 const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-                const baseUrl = coreUrl.replace(/\/api\/?$/, ''); // Strip /api suffix if present
+                const baseUrl = coreUrl.replace(/\/api\/?$/, '');
+
                 setTimeout(() => {
-                    window.location.href = `${baseUrl}/pay/${parsed.trxId}`;
+                    window.location.href = `${baseUrl}/pay/${id}`;
                 }, 800);
             } else {
-                toast.error('Unknown QR type');
+                toast.error('Unknown QR type: ' + parsed.type);
                 setProcessing(false);
                 setCameraActive(true);
             }

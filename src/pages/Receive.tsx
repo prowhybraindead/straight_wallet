@@ -8,12 +8,12 @@ import QRCode from 'react-qr-code';
 
 const Receive: React.FC = () => {
     const { profile } = useAuth();
-    const [qrType, setQrType] = useState<'P2P' | 'TRAIN_PAY'>('P2P');
+    const [qrType, setQrType] = useState<'P2P_RECEIVE' | 'PAYMENT'>('P2P_RECEIVE');
     const [amount, setAmount] = useState('');
 
     const qrData = JSON.stringify({
         type: qrType,
-        account: profile?.accountNumber || '',
+        target: profile?.accountNumber || '',
         name: profile?.displayName || profile?.email || '',
         ...(amount ? { amount: parseFloat(amount) } : {}),
     });
@@ -61,18 +61,18 @@ const Receive: React.FC = () => {
                 {/* QR type toggle */}
                 <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-5 w-full max-w-xs">
                     <button
-                        onClick={() => setQrType('P2P')}
-                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${qrType === 'P2P' ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-slate-400'
+                        onClick={() => setQrType('P2P_RECEIVE')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${qrType === 'P2P_RECEIVE' ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-slate-400'
                             }`}
                     >
-                        P2P Transfer
+                        Receive
                     </button>
                     <button
-                        onClick={() => setQrType('TRAIN_PAY')}
-                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${qrType === 'TRAIN_PAY' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-400'
+                        onClick={() => setQrType('PAYMENT')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${qrType === 'PAYMENT' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-400'
                             }`}
                     >
-                        TrainPay
+                        Merchant
                     </button>
                 </div>
 
