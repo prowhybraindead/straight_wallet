@@ -75,7 +75,15 @@ const Payment: React.FC = () => {
             }
 
             // 2. Call Core API (New Public Endpoint)
-            const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000';
+            const coreUrl = import.meta.env.VITE_CORE_API_URL;
+
+            // DIAGNOSTIC START
+            if (!coreUrl) {
+                alert("CRITICAL CONFIG ERROR: VITE_CORE_API_URL is undefined.\nPlease check your Vercel/Hosting Environment Variables.");
+                setLoading(false);
+                return;
+            }
+
             const response = await fetch(`${coreUrl}/api/v1/process-payment`, {
                 method: 'POST',
                 headers: {
@@ -99,6 +107,8 @@ const Payment: React.FC = () => {
 
         } catch (error: any) {
             console.error(error);
+            // NETWORK/CORS ERROR TRAP
+            alert(`PRODUCTION ERROR:\n${error.message}\n\nTroubleshooting:\n1. If "Failed to fetch": Check CORS on Core.\n2. Check if URL is correct.`);
             toast.error(error.message || 'Connection Error');
         } finally {
             setLoading(false);
