@@ -128,9 +128,12 @@ const Payment: React.FC = () => {
                 // 3. Complete Transaction
                 transaction.update(txRef, {
                     status: 'COMPLETED',
-                    payerId: profile!.uid,
+                    payerId: profile!.uid, // Keep for legacy compatibility
+                    senderId: profile!.uid, // CRITICAL: For Global History (Home.tsx)
+                    sourceId: selectedCard, // CRITICAL: For Card-Specific History (CardDetailView.tsx)
                     paymentMethod: 'DEBIT',
-                    processedAt: serverTimestamp()
+                    processedAt: serverTimestamp(),
+                    timestamp: serverTimestamp() // CRITICAL: For sorting in History (Home.tsx uses .toDate())
                 });
             });
 
