@@ -74,14 +74,17 @@ const Payment: React.FC = () => {
                 return;
             }
 
-            // 2. Call Core API
-            const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-            const response = await fetch(`${coreUrl}/pay`, {
+            // 2. Call Core API (New Public Endpoint)
+            const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${coreUrl}/api/v1/process-payment`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
                     transactionId,
-                    cardNumber: selectedCard
+                    cardNumber: selectedCard,
+                    pin
                 })
             });
 
