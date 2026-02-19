@@ -18,18 +18,34 @@ const Payment: React.FC = () => {
 
     useEffect(() => {
         const tid = searchParams.get('transactionId');
-        if (!tid) {
-            toast.error("Invalid Payment Link");
-            navigate('/');
-            return;
+        if (tid) {
+            setTransactionId(tid);
+            // Auto-select first card
+            if (profile?.cards && profile.cards.length > 0) {
+                setSelectedCard(profile.cards[0].number);
+            }
         }
-        setTransactionId(tid);
+    }, [searchParams, profile]);
 
-        // Auto-select first card
-        if (profile?.cards && profile.cards.length > 0) {
-            setSelectedCard(profile.cards[0].number);
-        }
-    }, [searchParams, profile, navigate]);
+    // Defensive: Debug UI for missing params
+    if (!searchParams.get('transactionId')) {
+        return (
+            <div className="p-4 bg-slate-900 text-yellow-400 min-h-screen font-mono text-xs flex flex-col justify-center">
+                <h1 className="text-xl font-bold mb-4 text-white">Debug Mode: Missing Params</h1>
+                <p className="mb-2">Param 'transactionId' is missing.</p>
+                <div className="bg-black p-4 rounded-xl border border-white/10 overflow-auto mb-8">
+                    <p className="text-slate-500 mb-2">// Current URL Params:</p>
+                    <pre>{JSON.stringify(Object.fromEntries([...searchParams]), null, 2)}</pre>
+                </div>
+                <button
+                    onClick={() => navigate('/')}
+                    className="w-full py-4 bg-white/10 hover:bg-white/20 px-4 rounded-xl text-white font-bold transition-colors"
+                >
+                    Go Home
+                </button>
+            </div>
+        );
+    }
 
     const handlePayment = async () => {
         if (!pin || pin.length !== 6) {
@@ -128,26 +144,37 @@ const Payment: React.FC = () => {
             <div className="mb-8">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">Pay with</label>
                 <div className="space-y-3">
-                    {profile?.cards.map((card: any) => (
-                        <div
-                            key={card.number}
-                            onClick={() => setSelectedCard(card.number)}
-                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${selectedCard === card.number
+                    {/* CRITICAL FIX: Safe Optional Chaining for profile.cards */}
+                    {profile?.cards?.length ? (
+                        profile.cards.map((card: any) => (
+                            <div
+                                key={card.number}
+                                onClick={() => setSelectedCard(card.number)}
+                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-4 ${selectedCard === card.number
                                     ? 'border-primary-500 bg-primary-500/5'
                                     : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                                }`}
-                        >
-                            <CreditCard className={`w-6 h-6 ${selectedCard === card.number ? 'text-primary-500' : 'text-slate-400'}`} />
-                            <div>
-                                <p className="font-bold text-sm dark:text-white">
-                                    {card.provider.toUpperCase()} <span className="text-slate-500">•••• {card.number.slice(-4)}</span>
-                                </p>
+                                    }`}
+                            >
+                                <CreditCard className={`w-6 h-6 ${selectedCard === card.number ? 'text-primary-500' : 'text-slate-400'}`} />
+                                <div>
+                                    <p className="font-bold text-sm dark:text-white">
+                                        {card.provider.toUpperCase()} <span className="text-slate-500">•••• {card.number.slice(-4)}</span>
+                                    </p>
+                                </div>
+                                {selectedCard === card.number && (
+                                    <div className="ml-auto w-4 h-4 bg-primary-500 rounded-full" />
+                                )}
                             </div>
-                            {selectedCard === card.number && (
-                                <div className="ml-auto w-4 h-4 bg-primary-500 rounded-full" />
-                            )}
+                        ))
+                    ) : (
+                        <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-sm text-slate-500 flex flex-col items-center gap-2">
+                            <CreditCard className="w-8 h-8 text-slate-300" />
+                            <p>No cards found</p>
+                            <button onClick={() => navigate('/card')} className="text-primary-500 font-bold text-xs hover:underline">
+                                Add a Card
+                            </button>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
 

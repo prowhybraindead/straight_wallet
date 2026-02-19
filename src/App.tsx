@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'sonner';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Scan from './pages/Scan';
 import Transfer from './pages/Transfer';
@@ -287,29 +288,31 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <AuthProvider>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700',
-            }}
-          />
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
-            <Routes>
-              <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
-              <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
-              <Route path="/transfer" element={<ProtectedRoute><Layout><Transfer /></Layout></ProtectedRoute>} />
-              <Route path="/payment" element={<ProtectedRoute><Layout><Payment /></Layout></ProtectedRoute>} />
-              <Route path="/receive" element={<ProtectedRoute><Layout><Receive /></Layout></ProtectedRoute>} />
-              <Route path="/analysis" element={<ProtectedRoute><Layout><Analysis /></Layout></ProtectedRoute>} />
-              <Route path="/savings" element={<ProtectedRoute><Layout><Savings /></Layout></ProtectedRoute>} />
-              <Route path="/card" element={<ProtectedRoute><Layout><Card /></Layout></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </div>
-        </AuthProvider>
-      </Router>
+      <ErrorBoundary>
+        <Router>
+          <AuthProvider>
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700',
+              }}
+            />
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300">
+              <Routes>
+                <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+                <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
+                <Route path="/transfer" element={<ProtectedRoute><Layout><Transfer /></Layout></ProtectedRoute>} />
+                <Route path="/payment" element={<ProtectedRoute><Layout><Payment /></Layout></ProtectedRoute>} />
+                <Route path="/receive" element={<ProtectedRoute><Layout><Receive /></Layout></ProtectedRoute>} />
+                <Route path="/analysis" element={<ProtectedRoute><Layout><Analysis /></Layout></ProtectedRoute>} />
+                <Route path="/savings" element={<ProtectedRoute><Layout><Savings /></Layout></ProtectedRoute>} />
+                <Route path="/card" element={<ProtectedRoute><Layout><Card /></Layout></ProtectedRoute>} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </div>
+          </AuthProvider>
+        </Router>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }
