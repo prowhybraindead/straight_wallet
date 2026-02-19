@@ -10,8 +10,16 @@ const Payment: React.FC = () => {
     const navigate = useNavigate();
     const { profile, verifyPin } = useAuth();
 
+    // State for Transaction Params
+    const [transactionId, setTransactionId] = useState('');
     const [merchant, setMerchant] = useState('Merchant');
     const [amount, setAmount] = useState('0.00');
+
+    // State for User Interaction
+    const [selectedCard, setSelectedCard] = useState<string>('');
+    const [pin, setPin] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         const tid = searchParams.get('transactionId');
@@ -32,14 +40,104 @@ const Payment: React.FC = () => {
 
     // Defensive: Debug UI for missing params
     if (!searchParams.get('transactionId')) {
-        // ... (Debug UI)
+        return (
+            <div className="p-4 bg-slate-900 text-yellow-400 min-h-screen font-mono text-xs flex flex-col justify-center">
+                <h1 className="text-xl font-bold mb-4 text-white">Debug Mode: Missing Params</h1>
+                <p className="mb-2">Param 'transactionId' is missing.</p>
+                <div className="bg-black p-4 rounded-xl border border-white/10 overflow-auto mb-8">
+                    <p className="text-slate-500 mb-2">// Current URL Params:</p>
+                    <pre>{JSON.stringify(Object.fromEntries([...searchParams]), null, 2)}</pre>
+                </div>
+                <button
+                    onClick={() => navigate('/')}
+                    className="w-full py-4 bg-white/10 hover:bg-white/20 px-4 rounded-xl text-white font-bold transition-colors"
+                >
+                    Go Home
+                </button>
+            </div>
+        );
     }
 
-    // ... (Handle Payment)
+    const handlePayment = async () => {
+        if (!pin || pin.length !== 6) {
+            toast.error('Enter 6-digit PIN');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Verify PIN (Client/Wallet Side)
+            const isPinValid = await verifyPin(pin);
+            if (!isPinValid) {
+                toast.error('Incorrect PIN');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Call Core API
+            const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
+            const response = await fetch(`${coreUrl}/pay`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transactionId,
+                    cardNumber: selectedCard
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Payment Failed');
+            }
+
+            setSuccess(true);
+            toast.success('Payment Successful!');
+
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || 'Connection Error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (success) {
+        return (
+            <div className="p-6 pt-10 flex flex-col items-center justify-center min-h-[70vh]">
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-emerald-500/50 shadow-lg mb-6"
+                >
+                    <CheckCircle className="w-10 h-10 text-white" />
+                </motion.div>
+                <h2 className="text-2xl font-bold dark:text-white mb-2">Payment Sent!</h2>
+                <p className="text-slate-500 text-sm mb-8 text-center max-w-xs">
+                    Transaction {transactionId.slice(0, 8)}... has been processed.
+                </p>
+                <button
+                    onClick={() => navigate('/')}
+                    className="w-full py-4 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold"
+                >
+                    Return Home
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="p-5 pt-8 max-w-md mx-auto">
-            {/* ... (Header) */}
+            <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 mb-8"
+            >
+                <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h1 className="text-2xl font-black dark:text-white">Checkout</h1>
+            </motion.div>
 
             <div className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-2xl mb-8 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-3 mb-4">
