@@ -44,9 +44,11 @@ const Scan: React.FC = () => {
             // CASE A: TrainCredit Core Payment QR
             if ((data.type === 'PAYMENT' || data.type === 'TRAIN_PAY') && (data.trId || data.trxId || data.transactionId)) {
                 const id = data.trId || data.trxId || data.transactionId;
+                const amount = data.amount || '0';
+                const merchant = data.merchantName || data.merchant || 'Merchant';
                 toast.success("Payment QR Detected");
                 setTimeout(() => {
-                    navigate(`/payment?transactionId=${id}`);
+                    navigate(`/payment?transactionId=${id}&amount=${amount}&merchant=${encodeURIComponent(merchant)}`);
                 }, 800);
                 return;
             }
