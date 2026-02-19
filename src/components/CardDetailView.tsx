@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Smartphone, Settings, Lock, RotateCcw, CreditCard, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
+import CardIssuerLogo from './ui/CardIssuerLogo';
 import { useAuth } from '../contexts/AuthContext';
 import type { Card as CardType } from '../types/user';
 import { toast } from 'sonner';
+import { formatCurrency } from '../utils/format';
 
 interface CardDetailViewProps {
     card: CardType;
@@ -95,8 +98,23 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
     const progress = Math.min((spent / limitAmount) * 100, 100);
 
+    // Optimistic UI for Freeze state
+    const [isFrozenOptimistic, setIsFrozenOptimistic] = useState(card?.isFrozen || false);
+
+    useEffect(() => {
+        if (card) {
+            setIsFrozenOptimistic(card.isFrozen || false);
+        }
+    }, [card?.isFrozen]);
+
     const handleToggleFreeze = async () => {
         if (!user || !card) return;
+
+        const previousState = isFrozenOptimistic;
+        const newState = !previousState;
+
+        // Optimistic Update
+        setIsFrozenOptimistic(newState);
 
         try {
             await runTransaction(db, async (transaction) => {
@@ -110,17 +128,15 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
                 if (cardIndex === -1) throw new Error("Card not found");
 
-                const newStatus = !cards[cardIndex].isFrozen;
-                cards[cardIndex].isFrozen = newStatus;
-
-                // If freezing, also set status to INACTIVE? Or just keep valid but frozen?
-                // requirement says "isFrozen" flag. Let's keep it orthogonal to 'status'.
+                cards[cardIndex].isFrozen = newState;
 
                 transaction.update(userRef, { cards });
             });
-            toast.success(card.isFrozen ? 'Card Unfrozen' : 'Card Frozen');
+            toast.success(newState ? 'Card Frozen' : 'Card Unfrozen');
         } catch (error: any) {
             console.error('Freeze error:', error);
+            // Revert on error
+            setIsFrozenOptimistic(previousState);
             toast.error(error.message || 'Failed to update card');
         }
     };
@@ -148,7 +164,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     animate={{
                         rotateY: isRotating ? 360 : isFlipped ? 180 : 0,
                         y: isRotating ? [0, -20, 0] : 0,
-                        filter: card.isFrozen ? 'grayscale(100%) brightness(0.7)' : 'none'
+                        filter: isFrozenOptimistic ? 'grayscale(100%) brightness(0.7)' : 'none'
                     }}
                     transition={{
                         rotateY: { duration: isRotating ? 1 : 0.6, ease: "easeInOut" },
@@ -156,14 +172,14 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     }}
                     onClick={() => !isRotating && setIsFlipped(!isFlipped)}
                 >
-                    {card.isFrozen && (
+                    {isFrozenOptimistic && (
                         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(1px)' }}>
                             <Lock className="w-16 h-16 text-white/50 drop-shadow-lg" />
                         </div>
                     )}
                     {/* === FRONT FACE === */}
                     <div
-                        className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-2xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}
+                        className={`absolute inset - 0 backface - hidden rounded - 2xl p - 6 shadow - 2xl ${bgClass} ${textColor} flex flex - col justify - between overflow - hidden border border - white / 10`}
                         style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
                         {/* ... existing front face ... */}
@@ -190,11 +206,11 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             </p>
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Card Holder</p>
+                                    <p className={`text - [10px] uppercase tracking - widest ${labelColor} mb - 0.5`}>Card Holder</p>
                                     <p className="font-medium tracking-wide truncate max-w-[180px] text-sm">{card.holderName}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Expires</p>
+                                    <p className={`text - [10px] uppercase tracking - widest ${labelColor} mb - 0.5`}>Expires</p>
                                     <p className="font-medium tracking-wide text-sm">{card.expiry}</p>
                                 </div>
                             </div>
@@ -203,7 +219,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
                     {/* === BACK FACE (Asymmetric) === */}
                     <div
-                        className={`absolute inset-0 backface-hidden rounded-2xl shadow-2xl bg-slate-800 text-white flex flex-col overflow-hidden border border-white/10`}
+                        className={`absolute inset - 0 backface - hidden rounded - 2xl shadow - 2xl bg - slate - 800 text - white flex flex - col overflow - hidden border border - white / 10`}
                         style={{
                             transform: 'rotateY(180deg)',
                             backfaceVisibility: 'hidden',
@@ -226,14 +242,12 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             <p className="text-[9px] text-slate-400 mt-1 text-right w-full">Security Code</p>
 
 
-                            <div className="flex gap-2 mt-4 opacity-50">
-                                <div className="w-8 h-5 bg-white/10 rounded" />
-                                <div className="w-8 h-5 bg-white/10 rounded" />
-                            </div>
-                        </div>
-
-                        <div className="p-3 bg-black/20 text-center">
-                            <p className="text-[8px] text-slate-500">
+                            <div className="flex justify-between items-start mb-8">
+                                <div className="w-12 h-8 rounded bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center">
+                                    <div className="w-8 h-5 bg-yellow-400/80 rounded-[2px]" />
+                                </div>
+                                <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md" variant="white" />
+                            </div>    <p className="text-[8px] text-slate-500">
                                 This card is property of Straight Bank. If found, please return to nearest branch.
                             </p>
                         </div>
@@ -246,11 +260,11 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             {/* Actions Grid */}
             <div className="grid grid-cols-3 gap-6 mb-8 w-full max-w-sm">
                 <OptionButton
-                    icon={card.isFrozen ? Lock : Smartphone} // Using Smartphone as 'Unlock' icon equivalent for now, or Lock with color
-                    isActive={card.isFrozen}
-                    label={card.isFrozen ? "Unfreeze" : "Freeze"}
+                    icon={isFrozenOptimistic ? Lock : Smartphone} // Using Smartphone as 'Unlock' icon equivalent for now, or Lock with color
+                    isActive={isFrozenOptimistic}
+                    label={isFrozenOptimistic ? "Unfreeze" : "Freeze"}
                     onClick={handleToggleFreeze}
-                    color={card.isFrozen ? "bg-red-500 text-white" : undefined}
+                    color={isFrozenOptimistic ? "bg-red-500 text-white" : undefined}
                 />
                 <OptionButton icon={Smartphone} label="Mobile Pay" />
                 <OptionButton icon={Settings} label="Settings" />
@@ -263,7 +277,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 uppercase tracking-widest">Available</span>
                         <span className="text-emerald-400 font-bold font-mono">
-                            {userAuth.privacyMode ? '••••••' : `$${(userAuth?.profile?.mainBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                            {userAuth.privacyMode ? '••••••' : `$${(userAuth?.profile?.mainBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} `}
                         </span>
                     </div>
                 </div>
@@ -276,7 +290,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             <p className="font-mono text-white tracking-widest">
                                 {showNumber
                                     ? (card.number.match(/.{1,4}/g)?.join(' ') || card.number)
-                                    : `•••• •••• •••• ${card.number.slice(-4)}`
+                                    : `•••• •••• •••• ${card.number.slice(-4)} `
                                 }
                             </p>
                             <div className="flex items-center gap-3">
@@ -345,7 +359,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             <button
                                 key={filter}
                                 onClick={() => setTimeFilter(filter)}
-                                className={`text-[10px] px-2 py-0.5 rounded-md transition-all ${timeFilter === filter ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
+                                className={`text - [10px] px - 2 py - 0.5 rounded - md transition - all ${timeFilter === filter ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'} `}
                             >
                                 {filter}
                             </button>
@@ -359,7 +373,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
+                        animate={{ width: `${progress}% ` }}
                         transition={{ duration: 1, delay: 0.5 }}
                         className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600"
                     />
@@ -416,7 +430,7 @@ const TransactionItem = ({ name, time, amount, hidden }: { name: string, time: s
             </div>
         </div>
         <span className={`font-bold ${amount > 0 ? 'text-emerald-400' : 'text-white'}`}>
-            {hidden ? '••••••' : `${amount < 0 ? '-' : '+'}$${Math.abs(amount).toFixed(2)}`}
+            {hidden ? '••••••' : `${amount < 0 ? '-' : '+'}${formatCurrency(Math.abs(amount))}`}
         </span>
     </div>
 );

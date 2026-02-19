@@ -4,8 +4,11 @@ import type { Card, CardScheme, CardTheme } from '../types/user';
 const BIN_MAP: Record<CardScheme, string> = {
     VISA: '4221',        // Visa
     MASTERCARD: '5100',  // Mastercard
-    NAPAS: '9704',       // Napas (Vietnam Domestic)
     AMEX: '37',          // Amex
+    DISCOVER: '6011',    // Discover
+    JCB: '35',           // JCB
+    UNIONPAY: '62',      // UnionPay
+    NAPAS: '9704',       // Napas (Vietnam Domestic)
 };
 
 // Theme Mapping Override
@@ -13,6 +16,9 @@ export const THEME_MAP: Record<CardScheme, CardTheme> = {
     VISA: 'gradient-blue',
     MASTERCARD: 'gradient-black',
     AMEX: 'metallic-silver',
+    DISCOVER: 'gradient-green', // Reusing green for Discover
+    JCB: 'gradient-blue',       // Reusing blue for JCB
+    UNIONPAY: 'gradient-black', // Reusing black for UnionPay
     NAPAS: 'gradient-green',
 };
 

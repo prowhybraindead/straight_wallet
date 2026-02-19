@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Wifi, CreditCard, Eye, EyeOff, Copy } from 'lucide-react';
+import { Wifi, CreditCard, Eye, EyeOff, Copy, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/format';
 import { toast } from 'sonner';
+import CardIssuerLogo from './ui/CardIssuerLogo';
 
 interface VirtualCardProps {
     showBalance: boolean;
@@ -44,20 +45,36 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
     const dateValue = isAccount ? createdDate : "12/30"; // Mock expiry for card if not available in profile yet
 
     // Task Requirement: "Show real CVV on flip" for Cards, "***" for Accounts.
-    // Since we don't have a specific virtual card object here (just profile), we'll assume a mock CVV for the "Virtual Card" mode if it existed, 
-    // but effectively we are viewing the 'Main Account' here. 
-    // However, if the user's account number *was* 16 digits, we'd show 123.
     const realCvv = isAccount ? "***" : "942";
+
+    // Get the first card for visual representation (mocking purely virtual card link to profile)
+    // In a real scenario, this component would accept a `card` prop.
+    // For now, let's assume the first card in profile is the "Virtual Card" being displayed, or fallback to 'VISA'
+    const virtualCard = profile?.cards?.[0];
+    const issuer = virtualCard?.scheme || 'VISA';
+    const isFrozen = virtualCard?.isFrozen || false;
 
     return (
         <div className="w-full h-56 perspective-1000 cursor-pointer select-none" onClick={handleFlip}>
             <motion.div
                 className="relative w-full h-full text-white"
                 initial={false}
-                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                animate={{
+                    rotateY: isFlipped ? 180 : 0,
+                    filter: isFrozen && !isFlipped ? 'grayscale(100%) brightness(0.8)' : 'none'
+                }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
                 style={{ transformStyle: "preserve-3d" }}
             >
+                {/* === FROZEN OVERLAY ICON === */}
+                {isFrozen && !isFlipped && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(1px)' }}>
+                        <div className="bg-black/40 p-3 rounded-full backdrop-blur-sm">
+                            <Lock className="w-8 h-8 text-white/80 drop-shadow-md" />
+                        </div>
+                    </div>
+                )}
+
                 {/* === FRONT === */}
                 <div className="absolute w-full h-full backface-hidden rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/30 dark:shadow-primary-500/20">
                     {/* Animated gradient background */}
@@ -79,9 +96,11 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                             <Wifi className="w-6 h-6 opacity-70 rotate-90" />
                         </div>
 
-                        {/* Chip */}
-                        <div className="flex items-center gap-3">
+                        {/* Chip & Issuer Logo */}
+                        <div className="flex justify-between items-center">
                             <div className="w-11 h-8 rounded-md bg-gradient-to-br from-yellow-300/90 to-yellow-500/70 border border-yellow-400/30" />
+                            {/* Positioned Logo */}
+                            <CardIssuerLogo issuer={issuer} className="h-8 w-auto text-white drop-shadow-md opacity-90" variant="white" />
                         </div>
 
                         <div className="space-y-2">

@@ -1,4 +1,4 @@
-export type CardScheme = 'VISA' | 'MASTERCARD' | 'NAPAS' | 'AMEX';
+export type CardScheme = 'VISA' | 'MASTERCARD' | 'AMEX' | 'DISCOVER' | 'JCB' | 'UNIONPAY' | 'NAPAS';
 export type CardStatus = 'ACTIVE' | 'LOCKED';
 export type CardTheme = 'gradient-blue' | 'gradient-black' | 'metallic-silver' | 'gradient-green';
 
