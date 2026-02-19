@@ -21,6 +21,8 @@ interface AuthContextType {
     logout: () => Promise<void>;
     verifyPin: (pin: string) => Promise<boolean>;
     refreshProfile: () => Promise<void>;
+    privacyMode: boolean;
+    togglePrivacyMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -115,9 +117,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user]);
 
+    const [privacyMode, setPrivacyMode] = useState(false);
+
+    const togglePrivacyMode = () => setPrivacyMode(prev => !prev);
+
+    // ... (rest of the code)
+
     return (
-        <AuthContext.Provider value={{ user, profile, loading, login, register, logout, verifyPin, refreshProfile }}>
+        <AuthContext.Provider value={{
+            user,
+            profile,
+            loading,
+            login,
+            register,
+            logout,
+            verifyPin,
+            refreshProfile,
+            privacyMode,      // NEW
+            togglePrivacyMode // NEW
+        }}>
             {children}
         </AuthContext.Provider>
     );
 };
+

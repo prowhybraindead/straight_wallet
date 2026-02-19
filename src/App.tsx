@@ -14,7 +14,8 @@ import Savings from './pages/Savings';
 import Card from './pages/Card';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Eye, EyeOff, Sparkles, Wallet, ArrowRight } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
+import Logo from './components/ui/Logo';
 
 // ═══════════════════════════════════════════════
 //  PREMIUM ANIME-STYLE LOGIN / REGISTER
@@ -89,10 +90,10 @@ const Login = () => {
             transition={{ delay: 0.2 }}
           >
             <div className="bg-white/20 p-3 rounded-2xl mb-3 backdrop-blur-xl">
-              <Wallet className="w-8 h-8 text-white" />
+              <Logo variant="icon" size="lg" />
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Straight Wallet</h1>
-            <p className="text-white/60 text-sm mt-1">Your Super App for Finance</p>
+            <Logo variant="full" size="xl" className="text-white" />
+            <p className="text-white/60 text-sm mt-1 font-medium tracking-wide">Your Super App for Finance</p>
           </motion.div>
 
           {/* Tab switcher */}

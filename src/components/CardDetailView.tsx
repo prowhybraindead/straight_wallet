@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Smartphone, Settings, Lock, RotateCcw, CreditCard, Eye, EyeOff, Copy, Check } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Card as CardType } from '../types/user';
@@ -95,6 +95,36 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
     const progress = Math.min((spent / limitAmount) * 100, 100);
 
+    const handleToggleFreeze = async () => {
+        if (!user || !card) return;
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const userRef = doc(db, 'users', user.uid);
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists()) throw new Error("User does not exist");
+
+                const userData = userDoc.data();
+                const cards = userData.cards || [];
+                const cardIndex = cards.findIndex((c: any) => c.number === card.number);
+
+                if (cardIndex === -1) throw new Error("Card not found");
+
+                const newStatus = !cards[cardIndex].isFrozen;
+                cards[cardIndex].isFrozen = newStatus;
+
+                // If freezing, also set status to INACTIVE? Or just keep valid but frozen?
+                // requirement says "isFrozen" flag. Let's keep it orthogonal to 'status'.
+
+                transaction.update(userRef, { cards });
+            });
+            toast.success(card.isFrozen ? 'Card Unfrozen' : 'Card Frozen');
+        } catch (error: any) {
+            console.error('Freeze error:', error);
+            toast.error(error.message || 'Failed to update card');
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -117,7 +147,8 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     className="relative w-80 h-[200px] cursor-pointer preserve-3d"
                     animate={{
                         rotateY: isRotating ? 360 : isFlipped ? 180 : 0,
-                        y: isRotating ? [0, -20, 0] : 0
+                        y: isRotating ? [0, -20, 0] : 0,
+                        filter: card.isFrozen ? 'grayscale(100%) brightness(0.7)' : 'none'
                     }}
                     transition={{
                         rotateY: { duration: isRotating ? 1 : 0.6, ease: "easeInOut" },
@@ -125,11 +156,17 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     }}
                     onClick={() => !isRotating && setIsFlipped(!isFlipped)}
                 >
+                    {card.isFrozen && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(1px)' }}>
+                            <Lock className="w-16 h-16 text-white/50 drop-shadow-lg" />
+                        </div>
+                    )}
                     {/* === FRONT FACE === */}
                     <div
                         className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-2xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}
                         style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
+                        {/* ... existing front face ... */}
                         {/* Shine effect */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
@@ -208,7 +245,13 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
             {/* Actions Grid */}
             <div className="grid grid-cols-3 gap-6 mb-8 w-full max-w-sm">
-                <OptionButton icon={Lock} label="Lock Card" />
+                <OptionButton
+                    icon={card.isFrozen ? Lock : Smartphone} // Using Smartphone as 'Unlock' icon equivalent for now, or Lock with color
+                    isActive={card.isFrozen}
+                    label={card.isFrozen ? "Unfreeze" : "Freeze"}
+                    onClick={handleToggleFreeze}
+                    color={card.isFrozen ? "bg-red-500 text-white" : undefined}
+                />
                 <OptionButton icon={Smartphone} label="Mobile Pay" />
                 <OptionButton icon={Settings} label="Settings" />
             </div>
@@ -220,7 +263,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 uppercase tracking-widest">Available</span>
                         <span className="text-emerald-400 font-bold font-mono">
-                            ${(userAuth?.profile?.mainBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {userAuth.privacyMode ? '••••••' : `$${(userAuth?.profile?.mainBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                         </span>
                     </div>
                 </div>
@@ -338,6 +381,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                                 name={tx.recipientName || 'Merchant'}
                                 time={tx.timestamp?.toDate().toLocaleDateString() || 'Unknown'}
                                 amount={-tx.amount} // Ledger shows spends as negative for clarity
+                                hidden={userAuth.privacyMode}
                             />
                         ))
                     )}
@@ -347,16 +391,20 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
     );
 };
 
-const OptionButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
-    <button className="flex flex-col items-center gap-3 group">
-        <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 group-hover:bg-primary-500 group-hover:text-white transition-all shadow-lg group-hover:scale-110">
+const OptionButton = ({ icon: Icon, label, onClick, isActive, color }: { icon: any, label: string, onClick?: () => void, isActive?: boolean, color?: string }) => (
+    <button
+        onClick={onClick}
+        className="flex flex-col items-center gap-3 group"
+    >
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg group-hover:scale-110 ${isActive ? (color || 'bg-primary-500 text-white') : 'bg-slate-800 text-slate-300 group-hover:bg-primary-500 group-hover:text-white'
+            }`}>
             <Icon className="w-6 h-6" />
         </div>
-        <span className="text-slate-400 text-xs font-medium group-hover:text-white transition-colors">{label}</span>
+        <span className={`text-xs font-medium transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>{label}</span>
     </button>
 );
 
-const TransactionItem = ({ name, time, amount }: { name: string, time: string, amount: number }) => (
+const TransactionItem = ({ name, time, amount, hidden }: { name: string, time: string, amount: number, hidden?: boolean }) => (
     <div className="flex justify-between items-center p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer">
         <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
@@ -368,7 +416,7 @@ const TransactionItem = ({ name, time, amount }: { name: string, time: string, a
             </div>
         </div>
         <span className={`font-bold ${amount > 0 ? 'text-emerald-400' : 'text-white'}`}>
-            {amount < 0 ? '-' : '+'}${Math.abs(amount).toFixed(2)}
+            {hidden ? '••••••' : `${amount < 0 ? '-' : '+'}$${Math.abs(amount).toFixed(2)}`}
         </span>
     </div>
 );

@@ -12,7 +12,8 @@ export interface Card {
     status: CardStatus;
     colorTheme: CardTheme;
     holderName: string;
-    provider?: string; // Add provider to match Payment.tsx usage (VISA/MASTERCARD) if needed, or map scheme
+    provider?: string;
+    isFrozen?: boolean; // Sprint 31: Freeze Feature
 }
 
 export interface UserProfile {

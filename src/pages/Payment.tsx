@@ -107,6 +107,10 @@ const Payment: React.FC = () => {
                 const chargeAmount = txData.amount;
                 const currentBalance = userData.mainBalance || 0;
 
+                const card = profile!.cards.find(c => c.number === selectedCard);
+                if (!card) throw new Error('Selected card not found');
+                if (card.isFrozen) throw new Error('This card is frozen. Please unfreeze it to make payments.');
+
                 if (currentBalance < chargeAmount) {
                     throw new Error(`Insufficient Funds. Balance: $${currentBalance}`);
                 }
