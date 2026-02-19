@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Shield, CreditCard, Loader2, CheckCircle, ArrowLeft, Store } from 'lucide-react';
 import { db } from '../firebase'; // Correct path to initialized Client SDK
-import { doc, runTransaction, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, runTransaction, getDoc, serverTimestamp, increment } from 'firebase/firestore';
 
 const Payment: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -78,7 +78,8 @@ const Payment: React.FC = () => {
                 const txRef = doc(db, 'transactions', transactionId);
                 const userRef = doc(db, 'users', profile!.uid);
 
-                // READS (Must come before Writes)
+                // --- PHASE 1: ALL READS ---
+                // We must read transaction first to get merchantId
                 const txDoc = await transaction.get(txRef);
                 const userDoc = await transaction.get(userRef);
 
@@ -88,6 +89,16 @@ const Payment: React.FC = () => {
                 const txData = txDoc.data();
                 const userData = userDoc.data();
 
+                // Conditional Read: Merchant (Must happen before ANY write)
+                let merchantRef: any = null;
+                let merchantDoc: any = null;
+
+                if (txData.merchantId) {
+                    merchantRef = doc(db, 'merchants', txData.merchantId);
+                    merchantDoc = await transaction.get(merchantRef);
+                }
+
+                // --- PHASE 2: VALIDATIONS (No writes yet) ---
                 // Idempotency & Status Check
                 if (txData.status === 'COMPLETED') throw new Error("Transaction already completed!");
                 if (txData.status === 'FAILED') throw new Error("Transaction Failed/Expired!");
@@ -100,30 +111,18 @@ const Payment: React.FC = () => {
                     throw new Error(`Insufficient Funds. Balance: $${currentBalance}`);
                 }
 
-                // WRITES
+                // --- PHASE 3: ALL WRITES ---
+
                 // 1. Deduct from User
                 transaction.update(userRef, {
-                    mainBalance: currentBalance - chargeAmount
+                    mainBalance: increment(-chargeAmount)
                 });
 
                 // 2. Credit Merchant
-                if (txData.merchantId) {
-                    const merchantRef = doc(db, 'merchants', txData.merchantId);
-                    // Note: We use increment() in typical SDKs, but inside transaction we can read-modify-write.
-                    // However, to be safe/simple without reading merchant doc (saving a read), we can use FieldValue.increment if supported in update.
-                    // But runTransaction requires Reads before Writes. 
-                    // Let's assume we just want to update the transaction status primarily, 
-                    // and maybe the merchant balance can be handled by a Cloud Function trigger if we want to save Reads?
-                    // "Prompt says: Write 2: Increment Amount to merchants/{merchantId}"
-                    // So we must read it or use a blind update if allowed.
-                    // Optimistic update:
-                    // transaction.update(merchantRef, { balance: increment(chargeAmount) }); // If import exists
-                    // Let's TRY to read it to be safe, assuming low contention.
-                    const merchDoc = await transaction.get(merchantRef);
-                    if (merchDoc.exists()) {
-                        const newMerchBal = (merchDoc.data().balance || 0) + chargeAmount;
-                        transaction.update(merchantRef, { balance: newMerchBal });
-                    }
+                if (merchantRef && merchantDoc && merchantDoc.exists()) {
+                    transaction.update(merchantRef, {
+                        balance: increment(chargeAmount)
+                    });
                 }
 
                 // 3. Complete Transaction
