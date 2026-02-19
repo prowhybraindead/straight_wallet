@@ -4,6 +4,7 @@ import { useTransaction, type Transaction } from '../hooks/useTransaction';
 import { formatCurrency } from '../utils/format';
 import { Skeleton } from '../components/Skeleton';
 import { motion } from 'framer-motion';
+import TransactionDetailView from '../components/TransactionDetailView';
 
 const Analysis: React.FC = () => {
     const { getTransactionsByUser, CATEGORIES } = useTransaction();
@@ -11,6 +12,7 @@ const Analysis: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [filterCategory, setFilterCategory] = useState<string>('All');
     const [filterDirection, setFilterDirection] = useState<'all' | 'in' | 'out'>('all');
+    const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
     const loadTx = useCallback(async () => {
         try {
@@ -200,7 +202,9 @@ const Analysis: React.FC = () => {
                             initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.03 }}
-                            className="flex justify-between items-center bg-white dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:shadow-sm transition-all"
+
+                            onClick={() => setSelectedTx(tx)}
+                            className="flex justify-between items-center bg-white dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:shadow-sm transition-all cursor-pointer active:scale-95"
                         >
                             <div className="flex items-center gap-3">
                                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${tx.direction === 'in'
@@ -229,7 +233,14 @@ const Analysis: React.FC = () => {
                         </motion.div>
                     ))
                 )}
+
             </div>
+
+            {/* Detail View Modal */}
+            <TransactionDetailView
+                transaction={selectedTx}
+                onClose={() => setSelectedTx(null)}
+            />
         </div>
     );
 };

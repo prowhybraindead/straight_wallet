@@ -27,55 +27,63 @@ const Scan: React.FC = () => {
 
     const handleScan = (detectedCodes: any[]) => {
         if (processing || !detectedCodes.length) return;
-        const data = detectedCodes[0].rawValue;
-        if (!data) return;
+        const rawData = detectedCodes[0].rawValue;
+        if (!rawData) return;
+
+        // Requirement 16.1: Log raw data
+        console.log("Raw Scanned Data:", rawData);
 
         setProcessing(true);
-        setResult(data);
+        setResult(rawData);
         setCameraActive(false); // Pause camera
 
         try {
-            // Try JSON format first
-            const parsed = JSON.parse(data);
+            // Requirement 16.2: Try-Parse Logic
+            const data = JSON.parse(rawData);
 
-            // Handle P2P Transfers (Standardized & Legacy)
-            if (parsed.type === 'P2P' || parsed.type === 'P2P_RECEIVE') {
-                const target = parsed.account || parsed.target;
-                toast.success(`Found User: ${parsed.name || target}`);
-                setTimeout(() => {
-                    navigate(`/transfer?to=${target}&name=${encodeURIComponent(parsed.name || '')}`);
-                }, 800);
-
-                // Handle Payment Gateway (Standardized & Legacy)
-            } else if (parsed.type === 'TRAIN_PAY' || parsed.type === 'PAYMENT') {
-                const id = parsed.trxId || parsed.trId;
-                if (!id) throw new Error("Missing Transaction ID");
-
-                // toast.info('Redirecting to Secure Gateway...');
-                // const coreUrl = import.meta.env.VITE_CORE_API_URL || 'http://localhost:3000/api';
-                // const baseUrl = coreUrl.replace(/\/api\/?$/, '');
-
+            // CASE A: TrainCredit Core Payment QR
+            if ((data.type === 'PAYMENT' || data.type === 'TRAIN_PAY') && (data.trId || data.trxId || data.transactionId)) {
+                const id = data.trId || data.trxId || data.transactionId;
+                toast.success("Payment QR Detected");
                 setTimeout(() => {
                     navigate(`/payment?transactionId=${id}`);
                 }, 800);
-            } else {
-                toast.error('Unknown QR type: ' + parsed.type);
-                setProcessing(false);
-                setCameraActive(true);
+                return;
             }
-        } catch {
-            // Legacy format fallback
-            if (data.startsWith('P2P:')) {
-                const account = data.split(':')[1];
-                toast.success(`Found account: ${account}`);
-                setTimeout(() => navigate(`/transfer?to=${account}`), 800);
-                const id = data.split(':')[1];
-                // toast.info('Redirecting to payment...');
-                setTimeout(() => { navigate(`/payment?transactionId=${id}`); }, 800);
+
+            // CASE B: P2P Receive QR (Internal)
+            if ((data.type === 'P2P_RECEIVE' || data.type === 'P2P') && (data.target || data.account)) {
+                const target = data.target || data.account;
+                toast.success(`Found User: ${data.name || target}`);
+                setTimeout(() => {
+                    navigate(`/transfer?to=${target}&name=${encodeURIComponent(data.name || '')}`);
+                }, 800);
+                return;
+            }
+
+            // CASE C: Invalid JSON Schema
+            toast.error("Invalid TrainCredit QR Format");
+            setProcessing(false);
+            setTimeout(() => setCameraActive(true), 1000);
+
+        } catch (error) {
+            // CASE D: Legacy/External QR (URL or Plain Text)
+            if (rawData.startsWith('http')) {
+                toast.info("Opening external link...");
+                setTimeout(() => {
+                    window.location.href = rawData;
+                }, 800);
             } else {
-                toast.error('Unknown QR Format');
-                setProcessing(false);
-                setCameraActive(true);
+                // Legacy P2P Fallback (P2P:12345)
+                if (rawData.startsWith('P2P:')) {
+                    const account = rawData.split(':')[1];
+                    toast.success(`Found account: ${account}`);
+                    setTimeout(() => navigate(`/transfer?to=${account}`), 800);
+                } else {
+                    toast.error("Unknown QR Type: " + rawData);
+                    setProcessing(false);
+                    setTimeout(() => setCameraActive(true), 1000);
+                }
             }
         }
     };
@@ -128,8 +136,15 @@ const Scan: React.FC = () => {
             {/* Scanner viewport */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "spring", damping: 20 }}
+                animate={{
+                    opacity: 1,
+                    scale: 1,
+                    borderColor: ['rgba(255,255,255,0.1)', 'rgba(16, 185, 129, 0.8)', 'rgba(255,255,255,0.1)']
+                }}
+                transition={{
+                    type: "spring", damping: 20,
+                    borderColor: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
                 className="relative w-72 h-72 z-10 overflow-hidden rounded-3xl border-2 border-white/10 shadow-2xl bg-black"
             >
                 {cameraActive && !error ? (

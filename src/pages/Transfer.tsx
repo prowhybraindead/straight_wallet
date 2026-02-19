@@ -20,6 +20,7 @@ const Transfer: React.FC = () => {
     const [amount, setAmount] = useState('');
     const [pin, setPin] = useState('');
     const [category, setCategory] = useState('Transfer');
+    const [message, setMessage] = useState('');
     const [success, setSuccess] = useState(false);
     const [lookingUp, setLookingUp] = useState(false);
 
@@ -82,7 +83,7 @@ const Transfer: React.FC = () => {
         }
 
         try {
-            await sendMoney(accountNum, parseFloat(amount), category);
+            await sendMoney(accountNum, parseFloat(amount), category, undefined, message);
             setSuccess(true);
         } catch (e: any) {
             toast.error(e.message || 'Transfer failed');
@@ -96,6 +97,7 @@ const Transfer: React.FC = () => {
         setPin('');
         setRecipient(null);
         setCategory('Transfer');
+        setMessage('');
         setSuccess(false);
     };
 
@@ -262,6 +264,24 @@ const Transfer: React.FC = () => {
                                         {cat}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Message (Optional) */}
+                        <div>
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1 mb-2">
+                                <Tag className="w-3 h-3" /> Message (Optional)
+                            </label>
+                            <textarea
+                                className="w-full p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-primary-400 transition-all resize-none"
+                                rows={2}
+                                placeholder="What's this for?"
+                                value={message}
+                                onChange={e => setMessage(e.target.value.slice(0, 140))}
+                                maxLength={140}
+                            />
+                            <div className="text-right text-[10px] text-slate-400 mt-1">
+                                {message.length}/140
                             </div>
                         </div>
 

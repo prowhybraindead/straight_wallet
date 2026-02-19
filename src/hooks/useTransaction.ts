@@ -67,7 +67,7 @@ export const useTransaction = () => {
         return null;
     };
 
-    const sendMoney = async (recipientAccountNumber: string, amount: number, category: string = 'Transfer', sourceId?: string) => {
+    const sendMoney = async (recipientAccountNumber: string, amount: number, category: string = 'Transfer', sourceId?: string, message?: string) => {
         if (!user || !profile) throw new Error('Not authenticated');
         if (amount <= 0) throw new Error('Amount must be positive');
         setLoading(true);
@@ -111,7 +111,8 @@ export const useTransaction = () => {
                     category,
                     status: 'completed',
                     timestamp: serverTimestamp(),
-                    sourceId: actualSourceId
+                    sourceId: actualSourceId,
+                    message: message || null
                 });
             });
         } catch (err: any) {
