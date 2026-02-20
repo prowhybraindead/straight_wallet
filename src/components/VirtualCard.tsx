@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Copy, Lock } from 'lucide-react';
+import { Eye, EyeOff, Copy, Lock, Wallet, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/format';
 import { toast } from 'sonner';
 import { getContrastTheme } from '../utils/colorUtils';
-import CardIssuerLogo from './ui/CardIssuerLogo';
 
 interface VirtualCardProps {
     showBalance: boolean;
@@ -90,8 +89,17 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                     <div className="absolute inset-0 shimmer opacity-30" />
 
                     <div className="relative z-10 p-6 flex flex-col justify-between h-full gap-4">
-                        <div className="flex justify-end w-full">
-                            <CardIssuerLogo issuer={virtualCard?.scheme || 'VISA'} className="h-10 sm:h-12 w-auto object-contain opacity-90 drop-shadow-2xl" theme={theme} />
+                        <div className="flex justify-between items-start w-full">
+                            {/* Top Left: STRAIGHT Branding */}
+                            <div className="flex items-center gap-2">
+                                <Wallet className={`w-6 h-6 ${textColor} opacity-90`} />
+                                <span className={`text-xl font-black tracking-widest ${textColor} drop-shadow-md`}>STRAIGHT</span>
+                            </div>
+
+                            {/* Top Right: NFC/Contactless Icon */}
+                            <div className={`p-1.5 rounded-full bg-white/10 backdrop-blur-md ${textColor}`}>
+                                <Wifi className="w-6 h-6 opacity-90 rotate-90" />
+                            </div>
                         </div>
                         <div className="space-y-2 mt-auto">
                             <div className="flex items-center gap-2">
