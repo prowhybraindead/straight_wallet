@@ -1,18 +1,32 @@
 import React from 'react';
 
+import visaLogo from '../assets/issuers/visa.svg';
+import mastercardLogo from '../assets/issuers/mastercard.svg';
+import amexLogo from '../assets/issuers/amex.svg';
+import discoverLogo from '../assets/issuers/discover.svg';
+import jcbLogo from '../assets/issuers/jcb.svg';
+import unionpayLogo from '../assets/issuers/unionpay.svg';
+
 interface CardIssuerLogoProps {
     issuer: string;
     className?: string;
     theme?: 'light' | 'dark';
 }
 
-const KNOWN_ISSUERS = ['VISA', 'MASTERCARD', 'AMEX', 'DISCOVER', 'JCB', 'UNIONPAY', 'NAPAS'];
+const LOGO_MAP: Record<string, string> = {
+    VISA: visaLogo,
+    MASTERCARD: mastercardLogo,
+    AMEX: amexLogo,
+    DISCOVER: discoverLogo,
+    JCB: jcbLogo,
+    UNIONPAY: unionpayLogo,
+};
 
 const CardIssuerLogo: React.FC<CardIssuerLogoProps> = ({ issuer, className = "w-10 h-auto", theme }) => {
     const normalizedIssuer = issuer.toUpperCase();
+    const src = LOGO_MAP[normalizedIssuer];
 
-    if (KNOWN_ISSUERS.includes(normalizedIssuer)) {
-        const src = `/assets/issuers/${normalizedIssuer.toLowerCase()}.svg`;
+    if (src) {
         // Apply pure white filter if theme is 'light' (dark background)
         const filterClass = theme === 'light' ? 'brightness-0 invert' : '';
         return <img src={src} className={`${className} ${filterClass}`.trim()} alt={normalizedIssuer} />;
