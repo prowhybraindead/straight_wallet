@@ -8,12 +8,15 @@ import { db } from '../firebase';
 import { createNewCard } from '../utils/cardGenerator';
 import type { Card as CardType, CardScheme } from '../types/user';
 import CardDetailView from '../components/CardDetailView';
+import CardIssuerLogo from '../components/ui/CardIssuerLogo';
 
 const SCHEMES: { id: CardScheme; name: string; gradient: string }[] = [
     { id: 'VISA', name: 'Visa Signature', gradient: 'bg-gradient-to-br from-blue-600 to-indigo-900' },
     { id: 'MASTERCARD', name: 'Mastercard World', gradient: 'bg-gradient-to-br from-slate-900 to-red-900' },
-    { id: 'NAPAS', name: 'Napas Domestic', gradient: 'bg-gradient-to-br from-green-500 to-teal-800' },
     { id: 'AMEX', name: 'American Express', gradient: 'bg-gradient-to-br from-slate-300 to-slate-500' },
+    { id: 'DISCOVER', name: 'Discover It', gradient: 'bg-gradient-to-br from-orange-500 to-red-600' },
+    { id: 'JCB', name: 'JCB Platinum', gradient: 'bg-gradient-to-br from-emerald-600 to-teal-900' },
+    { id: 'UNIONPAY', name: 'UnionPay Diamond', gradient: 'bg-gradient-to-br from-rose-600 to-red-900' },
 ];
 
 const CardPage = () => {
@@ -95,7 +98,7 @@ const CardPage = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
                     <div className="flex justify-between items-start">
-                        <span className="font-bold tracking-wider">{card.scheme}</span>
+                        <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md opacity-90" variant="white" />
                         <div className="flex items-center gap-1">
                             {card.status === 'LOCKED' && <Shield className="w-4 h-4 text-red-400" />}
                             <div className="w-8 h-5 bg-yellow-200/80 rounded" /> {/* Chip */}

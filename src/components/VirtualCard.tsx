@@ -4,7 +4,6 @@ import { Wifi, CreditCard, Eye, EyeOff, Copy, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/format';
 import { toast } from 'sonner';
-import CardIssuerLogo from './ui/CardIssuerLogo';
 
 interface VirtualCardProps {
     showBalance: boolean;
@@ -49,9 +48,8 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
 
     // Get the first card for visual representation (mocking purely virtual card link to profile)
     // In a real scenario, this component would accept a `card` prop.
-    // For now, let's assume the first card in profile is the "Virtual Card" being displayed, or fallback to 'VISA'
+    // For now, let's assume the first card in profile is the "Virtual Card" being displayed
     const virtualCard = profile?.cards?.[0];
-    const issuer = virtualCard?.scheme || 'VISA';
     const isFrozen = virtualCard?.isFrozen || false;
 
     return (
@@ -91,19 +89,12 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                 <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
                                     <CreditCard className="w-5 h-5" />
                                 </div>
-                                <span className="font-bold text-sm tracking-[0.2em] uppercase">Straight</span>
+                                <span className="font-bold text-sm tracking-[0.2em] uppercase">Straight Wallet</span>
                             </div>
                             <Wifi className="w-6 h-6 opacity-70 rotate-90" />
                         </div>
 
-                        {/* Chip & Issuer Logo */}
-                        <div className="flex justify-between items-center">
-                            <div className="w-11 h-8 rounded-md bg-gradient-to-br from-yellow-300/90 to-yellow-500/70 border border-yellow-400/30" />
-                            {/* Positioned Logo */}
-                            <CardIssuerLogo issuer={issuer} className="h-8 w-auto text-white drop-shadow-md opacity-90" variant="white" />
-                        </div>
-
-                        <div className="space-y-2">
+                        <div className="space-y-2 mt-auto">
                             <div className="flex items-center gap-2">
                                 <p className="text-xs uppercase tracking-wider opacity-70">Balance</p>
                                 {onToggleBalance && (

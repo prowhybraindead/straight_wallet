@@ -158,9 +158,10 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             <h2 className="text-white text-xl font-bold mb-8 tracking-wide uppercase">{card.scheme}</h2>
 
             {/* 3D Card Container */}
-            <div className="perspective-1000 mb-12">
+            <div className="mb-12" style={{ perspective: "1000px" }}>
                 <motion.div
-                    className="relative w-80 h-[200px] cursor-pointer preserve-3d"
+                    className="relative w-80 h-[200px] cursor-pointer"
+                    style={{ transformStyle: "preserve-3d" }}
                     animate={{
                         rotateY: isRotating ? 360 : isFlipped ? 180 : 0,
                         y: isRotating ? [0, -20, 0] : 0,
