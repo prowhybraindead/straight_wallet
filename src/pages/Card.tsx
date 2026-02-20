@@ -9,6 +9,7 @@ import { createNewCard } from '../utils/cardGenerator';
 import type { Card as CardType, CardScheme } from '../types/user';
 import CardDetailView from '../components/CardDetailView';
 import CardIssuerLogo from '../components/ui/CardIssuerLogo';
+import { getContrastTheme } from '../utils/colorUtils';
 
 const SCHEMES: { id: CardScheme; name: string; gradient: string }[] = [
     { id: 'VISA', name: 'Visa Signature', gradient: 'bg-gradient-to-br from-blue-600 to-indigo-900' },
@@ -82,8 +83,11 @@ const CardPage = () => {
         };
 
         const bgClass = getBgClass(card.colorTheme);
-        const textColor = card.colorTheme === 'metallic-silver' ? 'text-slate-800' : 'text-white';
-        const labelColor = card.colorTheme === 'metallic-silver' ? 'text-slate-600' : 'text-white/60';
+
+        // SMART CONTRAST: Evaluate the background class
+        const theme = getContrastTheme(bgClass);
+        const textColor = theme === 'dark' ? 'text-slate-900' : 'text-white';
+        const labelColor = theme === 'dark' ? 'text-slate-600' : 'text-white/60';
 
         return (
             <motion.div
@@ -98,7 +102,7 @@ const CardPage = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
                     <div className="flex justify-between items-start">
-                        <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md opacity-90" variant="white" />
+                        <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md opacity-90" theme={theme} />
                         <div className="flex items-center gap-1">
                             {card.status === 'LOCKED' && <Shield className="w-4 h-4 text-red-400" />}
                             <div className="w-8 h-5 bg-yellow-200/80 rounded" /> {/* Chip */}

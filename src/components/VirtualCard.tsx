@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Wifi, CreditCard, Eye, EyeOff, Copy, Lock } from 'lucide-react';
+import { Eye, EyeOff, Copy, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/format';
 import { toast } from 'sonner';
+import { getContrastTheme } from '../utils/colorUtils';
 
 interface VirtualCardProps {
     showBalance: boolean;
@@ -48,14 +49,18 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
 
     // Get the first card for visual representation (mocking purely virtual card link to profile)
     // In a real scenario, this component would accept a `card` prop.
-    // For now, let's assume the first card in profile is the "Virtual Card" being displayed
     const virtualCard = profile?.cards?.[0];
     const isFrozen = virtualCard?.isFrozen || false;
 
+    // The VirtualCard background uses primary-600 via accent-500, check contrast defaults 
+    const bgClass = 'bg-gradient-to-br from-primary-600 via-accent-500 to-primary-800';
+    const theme = getContrastTheme(bgClass);
+    const textColor = theme === 'dark' ? 'text-slate-900' : 'text-white';
+
     return (
-        <div className="w-full h-56 perspective-1000 cursor-pointer select-none" onClick={handleFlip}>
+        <div className="w-full aspect-[1.586] cursor-pointer select-none" style={{ perspective: '1000px' }} onClick={handleFlip}>
             <motion.div
-                className="relative w-full h-full text-white"
+                className={`relative w-full h-full ${textColor}`}
                 initial={false}
                 animate={{
                     rotateY: isFlipped ? 180 : 0,
@@ -83,31 +88,21 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                     {/* Shimmer overlay */}
                     <div className="absolute inset-0 shimmer opacity-30" />
 
-                    <div className="relative z-10 p-6 flex flex-col justify-between h-full">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
-                                    <CreditCard className="w-5 h-5" />
-                                </div>
-                                <span className="font-bold text-sm tracking-[0.2em] uppercase">Straight Wallet</span>
-                            </div>
-                            <Wifi className="w-6 h-6 opacity-70 rotate-90" />
-                        </div>
-
+                    <div className="relative z-10 p-6 flex flex-col justify-center h-full gap-4">
                         <div className="space-y-2 mt-auto">
                             <div className="flex items-center gap-2">
-                                <p className="text-xs uppercase tracking-wider opacity-70">Balance</p>
+                                <p className="text-sm uppercase tracking-widest opacity-80 font-medium">Total Balance</p>
                                 {onToggleBalance && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onToggleBalance(); }}
                                         className="opacity-70 hover:opacity-100 transition-opacity"
                                     >
-                                        {showBalance ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                        {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
                                 )}
                             </div>
                             <motion.h2
-                                className="text-3xl font-black tracking-tight"
+                                className="text-4xl font-black tracking-tight"
                                 key={showBalance ? 'show' : 'hide'}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -138,7 +133,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                         {isAccount ? 'Account Number' : 'Card Number'}
                                     </label>
                                     <div className="flex items-center gap-2">
-                                        <p className="font-mono text-lg tracking-[0.15em] text-white">{displayNumber}</p>
+                                        <p className={`font-mono text-lg tracking-[0.15em] ${textColor}`}>{displayNumber}</p>
                                         <button
                                             onClick={handleCopyAccount}
                                             className="text-slate-400 hover:text-white transition-colors"
@@ -149,14 +144,14 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <label className="text-[10px] uppercase tracking-wider text-slate-400">Name</label>
-                                    <p className="font-medium text-sm text-white">{profile?.displayName || 'CARD HOLDER'}</p>
+                                    <p className={`font-medium text-sm ${textColor}`}>{profile?.displayName || 'CARD HOLDER'}</p>
                                 </div>
                             </div>
 
                             <div className="flex justify-between items-end">
                                 <div>
                                     <span className="text-[9px] uppercase tracking-wider text-slate-400">{dateLabel}</span>
-                                    <p className="font-mono text-sm text-white">{dateValue}</p>
+                                    <p className={`font-mono text-sm ${textColor}`}>{dateValue}</p>
                                 </div>
                                 <div className="text-right">
                                     <span className="text-[9px] uppercase tracking-wider text-slate-400">CVV</span>

@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Card as CardType } from '../types/user';
 import { toast } from 'sonner';
 import { formatCurrency } from '../utils/format';
+import { getContrastTheme } from '../utils/colorUtils';
 
 interface CardDetailViewProps {
     card: CardType;
@@ -93,8 +94,11 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
     };
 
     const bgClass = getBgClass(card.colorTheme);
-    const textColor = card.colorTheme === 'metallic-silver' ? 'text-slate-800' : 'text-white';
-    const labelColor = card.colorTheme === 'metallic-silver' ? 'text-slate-600' : 'text-white/60';
+
+    // SMART CONTRAST: Evaluate the background class to determine if text should be dark or light
+    const theme = getContrastTheme(bgClass);
+    const textColor = theme === 'dark' ? 'text-slate-900' : 'text-white';
+    const labelColor = theme === 'dark' ? 'text-slate-600' : 'text-white/60';
 
     const progress = Math.min((spent / limitAmount) * 100, 100);
 
@@ -158,9 +162,9 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             <h2 className="text-white text-xl font-bold mb-8 tracking-wide uppercase">{card.scheme}</h2>
 
             {/* 3D Card Container */}
-            <div className="mb-12" style={{ perspective: "1000px" }}>
+            <div className="mb-12 w-full max-w-[320px]" style={{ perspective: "1000px" }}>
                 <motion.div
-                    className="relative w-80 h-[200px] cursor-pointer"
+                    className="relative w-full aspect-[1.586] cursor-pointer"
                     style={{ transformStyle: "preserve-3d" }}
                     animate={{
                         rotateY: isRotating ? 360 : isFlipped ? 180 : 0,
@@ -180,7 +184,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                     )}
                     {/* === FRONT FACE === */}
                     <div
-                        className={`absolute inset - 0 backface - hidden rounded - 2xl p - 6 shadow - 2xl ${bgClass} ${textColor} flex flex - col justify - between overflow - hidden border border - white / 10`}
+                        className={`absolute inset-0 backface-hidden rounded-2xl p-6 shadow-2xl ${bgClass} ${textColor} flex flex-col justify-between overflow-hidden border border-white/10`}
                         style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                     >
                         {/* ... existing front face ... */}
@@ -207,11 +211,11 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             </p>
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className={`text - [10px] uppercase tracking - widest ${labelColor} mb - 0.5`}>Card Holder</p>
+                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Card Holder</p>
                                     <p className="font-medium tracking-wide truncate max-w-[180px] text-sm">{card.holderName}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`text - [10px] uppercase tracking - widest ${labelColor} mb - 0.5`}>Expires</p>
+                                    <p className={`text-[10px] uppercase tracking-widest ${labelColor} mb-0.5`}>Expires</p>
                                     <p className="font-medium tracking-wide text-sm">{card.expiry}</p>
                                 </div>
                             </div>
@@ -220,7 +224,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
 
                     {/* === BACK FACE (Asymmetric) === */}
                     <div
-                        className={`absolute inset - 0 backface - hidden rounded - 2xl shadow - 2xl bg - slate - 800 text - white flex flex - col overflow - hidden border border - white / 10`}
+                        className={`absolute inset-0 backface-hidden rounded-2xl shadow-2xl bg-slate-800 text-white flex flex-col overflow-hidden border border-white/10`}
                         style={{
                             transform: 'rotateY(180deg)',
                             backfaceVisibility: 'hidden',
@@ -247,7 +251,8 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                                 <div className="w-12 h-8 rounded bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center">
                                     <div className="w-8 h-5 bg-yellow-400/80 rounded-[2px]" />
                                 </div>
-                                <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md" variant="white" />
+                                {/* The back face is consistently dark slate, so theme is 'light' */}
+                                <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md" theme="light" />
                             </div>    <p className="text-[8px] text-slate-500">
                                 This card is property of Straight Bank. If found, please return to nearest branch.
                             </p>
@@ -360,7 +365,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                             <button
                                 key={filter}
                                 onClick={() => setTimeFilter(filter)}
-                                className={`text - [10px] px - 2 py - 0.5 rounded - md transition - all ${timeFilter === filter ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'} `}
+                                className={`text-[10px] px-2 py-0.5 rounded-md transition-all ${timeFilter === filter ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 {filter}
                             </button>
