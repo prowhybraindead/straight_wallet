@@ -252,7 +252,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                                     <div className="w-8 h-5 bg-yellow-400/80 rounded-[2px]" />
                                 </div>
                                 {/* The back face is consistently dark slate, so theme is 'light' */}
-                                <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md" theme="light" />
+                                <CardIssuerLogo issuer={card.scheme} className="h-10 w-auto text-white drop-shadow-md" theme="light" />
                             </div>    <p className="text-[8px] text-slate-500">
                                 This card is property of Straight Bank. If found, please return to nearest branch.
                             </p>

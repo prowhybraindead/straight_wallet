@@ -102,7 +102,7 @@ const CardPage = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
                     <div className="flex justify-between items-start">
-                        <CardIssuerLogo issuer={card.scheme} className="h-8 w-auto text-white drop-shadow-md opacity-90" theme={theme} />
+                        <CardIssuerLogo issuer={card.scheme} className="h-10 w-auto text-white drop-shadow-md opacity-90" theme={theme} />
                         <div className="flex items-center gap-1">
                             {card.status === 'LOCKED' && <Shield className="w-4 h-4 text-red-400" />}
                             <div className="w-8 h-5 bg-yellow-200/80 rounded" /> {/* Chip */}
