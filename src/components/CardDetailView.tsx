@@ -191,9 +191,9 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                         {/* Shine effect */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
-                        <div className="flex justify-between items-start relative z-10">
-                            {/* Scheme Logo Text */}
-                            <span className="font-bold tracking-wider text-lg">{card.scheme}</span>
+                        <div className="flex justify-between items-start relative z-10 mb-2">
+                            {/* Massive Logo Replacement */}
+                            <CardIssuerLogo issuer={card.scheme} className="h-12 w-auto max-w-[120px] drop-shadow-md" />
                             <div className="flex items-center gap-1">
                                 <div className="w-10 h-7 bg-yellow-200/80 rounded-md flex items-center justify-center overflow-hidden border border-yellow-400/30">
                                     <div className="w-full h-[1px] bg-yellow-600/20 my-0.5" />
@@ -252,7 +252,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
                                     <div className="w-8 h-5 bg-yellow-400/80 rounded-[2px]" />
                                 </div>
                                 {/* The back face is consistently dark slate, so theme is 'light' */}
-                                <CardIssuerLogo issuer={card.scheme} className="h-10 w-auto text-white drop-shadow-md" theme="light" />
+                                <CardIssuerLogo issuer={card.scheme} className="h-10 w-auto max-w-[100px] drop-shadow-md" theme="light" />
                             </div>    <p className="text-[8px] text-slate-500">
                                 This card is property of Straight Bank. If found, please return to nearest branch.
                             </p>

@@ -22,24 +22,13 @@ const LOGO_MAP: Record<string, string> = {
     UNIONPAY: unionpayLogo,
 };
 
-const CardIssuerLogo: React.FC<CardIssuerLogoProps> = ({ issuer, className = "h-10 w-auto", theme }) => {
+const CardIssuerLogo: React.FC<CardIssuerLogoProps> = ({ issuer, className = "h-12 w-auto max-w-[100px]" }) => {
     const normalizedIssuer = issuer.toUpperCase();
     const src = LOGO_MAP[normalizedIssuer];
 
     if (src) {
-        const isMultiColor = ['JCB', 'UNIONPAY'].includes(normalizedIssuer);
-
-        if (isMultiColor) {
-            return (
-                <div className={`bg-white rounded-md px-1.5 py-0.5 shadow-sm flex items-center justify-center ${className}`.trim()}>
-                    <img src={src} className="h-full w-auto max-h-full" alt={normalizedIssuer} />
-                </div>
-            );
-        }
-
-        // Apply pure white filter if theme is 'light' (dark background)
-        const filterClass = theme === 'light' ? 'brightness-0 invert' : '';
-        return <img src={src} className={`${className} ${filterClass}`.trim()} alt={normalizedIssuer} />;
+        // Raw Visual Test: No filters, no white badges, just the raw scalable SVG
+        return <img src={src} className={className.trim()} alt={normalizedIssuer} />;
     }
 
     // Generic Credit Card Icon Fallback

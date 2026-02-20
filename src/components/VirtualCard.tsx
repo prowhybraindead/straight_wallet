@@ -91,7 +91,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
 
                     <div className="relative z-10 p-6 flex flex-col justify-between h-full gap-4">
                         <div className="flex justify-end w-full">
-                            <CardIssuerLogo issuer={virtualCard?.scheme || 'VISA'} className="h-10 w-auto opacity-90 drop-shadow-2xl" theme={theme} />
+                            <CardIssuerLogo issuer={virtualCard?.scheme || 'VISA'} className="h-12 w-auto max-w-[100px] opacity-90 drop-shadow-2xl" />
                         </div>
                         <div className="space-y-2 mt-auto">
                             <div className="flex items-center gap-2">
