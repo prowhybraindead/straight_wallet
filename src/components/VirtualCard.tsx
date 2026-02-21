@@ -57,6 +57,17 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
     const theme = getContrastTheme(bgClass);
     const textColor = theme === 'dark' ? 'text-slate-900' : 'text-white';
 
+    const balanceStr = showBalance ? formatCurrency(profile?.mainBalance || 0) : '••••••';
+    const len = balanceStr.length;
+    let dynamicTextClass = 'text-4xl md:text-5xl';
+    if (len > 18) {
+        dynamicTextClass = 'text-xl md:text-2xl';
+    } else if (len > 14) {
+        dynamicTextClass = 'text-2xl md:text-3xl';
+    } else if (len > 10) {
+        dynamicTextClass = 'text-3xl md:text-4xl';
+    }
+
     return (
         <div className="w-full aspect-[1.586] cursor-pointer select-none" style={{ perspective: '1000px' }} onClick={handleFlip}>
             <motion.div
@@ -114,13 +125,13 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                 )}
                             </div>
                             <motion.h2
-                                className="w-full text-[clamp(1.75rem,5vw,2.5rem)] leading-tight font-black tracking-tight truncate"
+                                className={`w-full font-black tracking-tight whitespace-nowrap leading-tight ${dynamicTextClass}`}
                                 key={showBalance ? 'show' : 'hide'}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                {showBalance ? formatCurrency(profile?.mainBalance || 0) : '••••••'}
+                                {balanceStr}
                             </motion.h2>
                         </div>
                     </div>
