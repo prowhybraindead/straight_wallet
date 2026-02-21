@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Copy, Lock, Wallet, Wifi } from 'lucide-react';
+import { Eye, EyeOff, Copy, Wallet, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/format';
 import { toast } from 'sonner';
@@ -47,10 +47,6 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
     // Task Requirement: "Show real CVV on flip" for Cards, "***" for Accounts.
     const realCvv = isAccount ? "***" : "942";
 
-    // Get the first card for visual representation (mocking purely virtual card link to profile)
-    // In a real scenario, this component would accept a `card` prop.
-    const virtualCard = profile?.cards?.[0];
-    const isFrozen = virtualCard?.isFrozen || false;
 
     // The VirtualCard background uses primary-600 via accent-500, check contrast defaults 
     const bgClass = 'bg-gradient-to-br from-primary-600 via-accent-500 to-primary-800';
@@ -74,21 +70,11 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                 className={`relative w-full h-full ${textColor}`}
                 initial={false}
                 animate={{
-                    rotateY: isFlipped ? 180 : 0,
-                    filter: isFrozen && !isFlipped ? 'grayscale(100%) brightness(0.8)' : 'none'
+                    rotateY: isFlipped ? 180 : 0
                 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
                 style={{ transformStyle: "preserve-3d", willChange: "transform" }}
             >
-                {/* === FROZEN OVERLAY ICON === */}
-                {isFrozen && !isFlipped && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(1px)' }}>
-                        <div className="bg-black/40 p-3 rounded-full backdrop-blur-sm">
-                            <Lock className="w-8 h-8 text-white/80 drop-shadow-md" />
-                        </div>
-                    </div>
-                )}
-
                 {/* === FRONT === */}
                 <div className="absolute w-full h-full backface-hidden rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/30 dark:shadow-primary-500/20">
                     {/* Animated gradient background */}
