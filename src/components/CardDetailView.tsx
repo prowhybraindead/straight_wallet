@@ -151,6 +151,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-start pt-12 px-6 overflow-y-auto"
+            style={{ transform: 'translateZ(0)', willChange: 'opacity, filter' }}
         >
             <button
                 onClick={onClose}
@@ -165,7 +166,7 @@ const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose }) => {
             <div className="mb-12 w-full max-w-[320px]" style={{ perspective: "1000px" }}>
                 <motion.div
                     className="relative w-full aspect-[1.586] cursor-pointer"
-                    style={{ transformStyle: "preserve-3d" }}
+                    style={{ transformStyle: "preserve-3d", willChange: "transform" }}
                     animate={{
                         rotateY: isRotating ? 360 : isFlipped ? 180 : 0,
                         y: isRotating ? [0, -20, 0] : 0,

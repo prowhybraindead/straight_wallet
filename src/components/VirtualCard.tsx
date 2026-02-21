@@ -67,7 +67,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                     filter: isFrozen && !isFlipped ? 'grayscale(100%) brightness(0.8)' : 'none'
                 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
-                style={{ transformStyle: "preserve-3d" }}
+                style={{ transformStyle: "preserve-3d", willChange: "transform" }}
             >
                 {/* === FROZEN OVERLAY ICON === */}
                 {isFrozen && !isFlipped && (
