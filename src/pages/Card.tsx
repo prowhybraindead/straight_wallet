@@ -187,9 +187,7 @@ const CardPage = () => {
                                         <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity ${s.gradient}`} />
 
                                         <div className="flex items-center gap-4 relative z-10">
-                                            <div className={`w-12 h-8 rounded-md shadow-sm ${s.gradient} flex items-center justify-center text-[10px] font-bold text-white tracking-tighter border border-white/20`}>
-                                                {s.id}
-                                            </div>
+                                            <CardIssuerLogo issuer={s.id} className="h-10 w-auto object-contain" />
                                             <div className="text-left">
                                                 <p className="font-bold dark:text-white text-sm">{s.name}</p>
                                                 <p className="text-xs text-slate-400">International Debit</p>

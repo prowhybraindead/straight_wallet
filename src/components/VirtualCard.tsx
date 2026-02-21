@@ -114,7 +114,7 @@ const VirtualCard: React.FC<VirtualCardProps> = ({ showBalance, onToggleBalance 
                                 )}
                             </div>
                             <motion.h2
-                                className="text-4xl font-black tracking-tight"
+                                className="w-full text-[clamp(1.75rem,5vw,2.5rem)] leading-tight font-black tracking-tight truncate"
                                 key={showBalance ? 'show' : 'hide'}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
